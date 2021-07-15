@@ -7,8 +7,6 @@ library(readxl)
 #EVI
 #PESTICIDES?
 
-setwd("/Users/ellyknight/Documents/UoA/Projects/Projects/MCP2/Analysis/Habitat")
-
 band <- read_excel("tbl_band.xlsx") %>% 
   dplyr::select(PinpointID, Population) %>% 
   dplyr::filter(PinpointID != -99)
@@ -25,7 +23,9 @@ forest <- rbind(forest200, forest2000, forest20000) %>%
   mutate(treecover2020 = treecover2000*(1-loss)) %>% 
   left_join(band) %>% 
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
-  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"))
+  arrange(PinpointID, DateTime) %>% 
+  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
+         ID = row_number())
 
 hm200 <- read.csv("Covariates/HumanModification_200.csv") %>% 
   mutate(buffer="200m")
@@ -39,7 +39,9 @@ hm <- rbind(hm200, hm2000, hm20000) %>%
   rename(hm = mean) %>% 
   left_join(band) %>% 
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
-  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"))
+  arrange(PinpointID, DateTime) %>% 
+  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
+         ID = row_number())
 
 ggplot(hm, aes(x=Season, y=hm, colour=factor(PinpointID))) +
   geom_point() +
@@ -57,8 +59,15 @@ lc <- rbind(lc200, lc2000, lc20000) %>%
   dplyr::select(PinpointID, Season2, DateTime, Lat, Long, bare, crops, grass, moss, shrub, snow, tree, urban, water.permanent, water.seasonal, buffer) %>% 
   left_join(band) %>% 
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
-  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"))
+  arrange(PinpointID, DateTime) %>% 
+  mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
+         ID = row_number())
 
 ggplot(lc, aes(x=Season, y=water.seasonal, colour=factor(PinpointID))) +
   geom_point() +
   facet_grid(buffer~Population)
+
+covs <- full_join(forest, hm) %>% 
+  full_join(lc)
+
+write.csv(covs, "Covariates_Breed&Winter.csv", row.names=FALSE)
