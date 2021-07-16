@@ -1,87 +1,161 @@
 library(tidyverse)
 library(vegan)
-
-covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
-  dplyr::filter(buffer=="2km")
-
+library(data.table)
 
 #SHOULD TRY LOOKING AT SEX DIFFERENCES TOO
+#SHOULD COMPARE 1st & 2nd WINTERING LOCATIONS
 #NEED TO SELECT # OF AXES
 #NEED TO SELECT BEST EXTENT
+#NEED TO CHOOSE DISTANCE MEASURE
+#NEED TO SAVE OUT COVS SCORES TOO
 
+#1. Wrangle----
+covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
+  dplyr::filter(Winter==1,
+                buffer=="2km")
 
-set.seed(1234)
-
-#Breeding----
-#Wrangle
 covs.breed <- covs %>% 
   dplyr::filter(Season2 %in% c("Breed1", "Breed2")) %>% 
-  mutate(ID=paste0(PinpointID, "-", "Breed")) %>% 
-  dplyr::select(Population, ID, treecover2020, hm, bare, crops, grass, shrub, tree, water.permanent, water.seasonal) %>% 
-  group_by(Population, ID) %>% 
-  summarize_all(mean) %>% 
-  ungroup() %>% 
-  data.frame()
+  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
 
-#Matrix
-mat.breed <- covs.breed %>% 
-  dplyr::select(-Population, -ID) %>% 
-  data.matrix()
-rownames(mat.breed) <- covs.breed$ID
+covs.winter1 <- covs %>% 
+  dplyr::filter(Season2=="Winter") %>% 
+  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
 
-#Run
-nmds.breed <- metaMDS(mat.breed, k=2)
+ids.winter <- covs %>% 
+  dplyr::select(PinpointID, Season2) %>% 
+  dplyr::filter(Season2=="Winter2") %>% 
+  unique() %>% 
+  mutate(Winter2=1) %>% 
+  dplyr::select(-Season2)
 
-#Plotting
-stressplot(nmds.breed) #Excellent
+covs.winter2 <- covs %>% 
+  left_join(ids.winter) %>% 
+  mutate(Winter2=ifelse(is.na(Winter2), 0, Winter2)) %>% 
+  dplyr::filter((Winter2==1 & Season2=="Winter2") | (Winter2==0 & Season2=="Winter")) %>% 
+  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
 
-ordiplot(nmds.breed,type="n")
-orditorp(nmds.breed,display="species",col="red",air=0.01)
+#2. Set up bootstrap----
+boot <- 100
+set.seed(1234)
+scores.list <- list()
+covscores.list <- list()
 
-ordiplot(nmds.breed,type="n")
-orditorp(nmds.breed,display="sites",cex=1.25,air=0.01, col=covs.breed$Population)
-ordihull(nmds.breed, groups=covs.breed$Population, draw="polygon", col="grey90", label=FALSE)
+for(i in 1:boot){
+  
+  #3. Select one location per individual
+  covs.breed.i <- covs.breed %>% 
+    group_by(PinpointID) %>% 
+    sample_n(1) %>% 
+    ungroup()
+  
+  covs.winter1.i <- covs.winter1 %>% 
+    group_by(PinpointID) %>% 
+    sample_n(1) %>% 
+    ungroup()
+  
+  covs.winter2.i <- covs.winter2 %>% 
+    group_by(PinpointID) %>% 
+    sample_n(1) %>% 
+    ungroup()
+  
+  #4. Convert to matrix----
+  mat.breed <- covs.breed.i %>% 
+    dplyr::select(-Population, -PinpointID, -Sex) %>% 
+    data.matrix()
+  rownames(mat.breed) <- covs.breed.i$PinpointID
+  
+  mat.winter1 <- covs.winter1.i %>% 
+    dplyr::select(-Population, -PinpointID, -Sex) %>% 
+    data.matrix()
+  rownames(mat.winter1) <- covs.winter1.i$PinpointID
+  
+  mat.winter2 <- covs.winter2.i %>% 
+    dplyr::select(-Population, -PinpointID, -Sex) %>% 
+    data.matrix()
+  rownames(mat.winter2) <- covs.winter2.i$PinpointID
+  
+  #5. Calculate distance matrix----
+  
+  #5. Run NMDS----
+  nmds.breed <- metaMDS(mat.breed, k=2, trace=0)
+  nmds.winter1 <- metaMDS(mat.winter1, k=2, trace=0)
+  nmds.winter2 <- metaMDS(mat.winter2, k=2, trace=0)
+  
+  #Plotting
+#  stressplot(nmds.breed) #Excellent
+  
+#  ordiplot(nmds.breed,type="n")
+#  orditorp(nmds.breed,display="sites",cex=1.25,air=0.01, col=covs.breed$Population)
+#  ordihull(nmds.breed, groups=covs.breed$Population, draw="polygon", col="grey90", label=FALSE)
+#  orditorp(nmds.breed,display="species",col="red",air=0.01)
+  
+  #6. Save out coords for each individual----
+  scores.breed <- scores(nmds.breed, "sites") %>% 
+    data.frame() %>% 
+    mutate(PinpointID=rownames(scores(nmds.breed)),
+           Season="breed")
+  
+  scores.winter1 <- scores(nmds.winter1, "sites") %>% 
+    data.frame() %>% 
+    mutate(PinpointID=rownames(scores(nmds.winter1)),
+           Season="winter1")
+  
+  scores.winter2 <- scores(nmds.winter2, "sites") %>% 
+    data.frame() %>% 
+    mutate(PinpointID=rownames(scores(nmds.winter2)),
+           Season="winter2")
+  
+  scores.list[[i]] <- rbind(scores.breed, scores.winter1, scores.winter2) %>% 
+    mutate(boot=i)
+  
+  #7. Save out coords for each covariate----
+  covscores.breed <- scores(nmds.breed, "species") %>% 
+    data.frame() %>% 
+    mutate(cov=rownames(scores(nmds.breed, "species")),
+           Season="breed")
+  
+  covscores.winter1 <- scores(nmds.winter1, "species") %>% 
+    data.frame() %>% 
+    mutate(cov=rownames(scores(nmds.winter1, "species")),
+           Season="winter1")
+  
+  covscores.winter2 <- scores(nmds.winter2, "species") %>% 
+    data.frame() %>% 
+    mutate(cov=rownames(scores(nmds.winter2, "species")),
+           Season="winter2")
 
-#Save out coords
-scores.breed <- scores(nmds.breed) %>% 
-  data.frame() %>% 
-  mutate(ID=rownames(scores(nmds.breed))) %>% 
-  separate(ID, into=c("PinpointID", "Season"))
-write.csv(scores.breed, "NMDSScores_Breed.csv", row.names = FALSE)
+  
+  covscores.list[[i]] <- rbind(covscores.breed, covscores.winter1, covscores.winter2) %>% 
+    mutate(boot=i)
+  
+  print(paste0("Finished boostrap ", i))
 
-#Winter----
-covs.winter <- covs %>% 
-  dplyr::filter(Season2 %in% c("Winter", "Winter2")) %>% 
-  mutate(ID=paste0(PinpointID, "-", Season2)) %>% 
-  dplyr::select(Population, ID, treecover2020, hm, bare, crops, grass, shrub, tree, water.permanent, water.seasonal) %>% 
-  group_by(Population, ID) %>% 
-  summarize_all(mean) %>% 
-  ungroup() %>% 
-  data.frame()
+}
 
-#Matrix
-mat.winter <- covs.winter %>% 
-  dplyr::select(-Population, -ID) %>% 
-  data.matrix()
-rownames(mat.winter) <- covs.winter$ID
+#8. Convert to datatable and write out----
+scores <- rbindlist(scores.list)
+covscores <- rbindlist(covscores.list)
 
-#Run
-nmds.winter <- metaMDS(mat.winter, k=2)
+write.csv(scores, "NMDSScores_Bootstap.csv", row.names = FALSE)
+write.csv(covscores, "NMDSCovScores_Bootstap.csv", row.names = FALSE)
 
-#Plotting
-stressplot(nmds.winter) #Excellent
+#9. Look at variance----
+ggplot(scores) +
+  geom_point(aes(x=PinpointID, y=NMDS1, colour=factor(PinpointID))) +
+  facet_wrap(~Season)
 
-ordiplot(nmds.winter,type="n")
-orditorp(nmds.winter,display="species",col="red",air=0.01)
+ggplot(scores) +
+  geom_point(aes(x=PinpointID, y=NMDS2, colour=factor(PinpointID))) +
+  facet_wrap(~Season)
+#More variance in breeding, but looks like makes sense overall
 
-ordiplot(nmds.winter,type="n")
-orditorp(nmds.winter,display="sites",cex=1.25,air=0.01, col=covs.winter$Population)
-ordihull(nmds.winter, groups=covs.winter$Population, draw="polygon", col="grey90", label=FALSE)
+ggplot(covscores) +
+  geom_point(aes(x=cov, y=NMDS1, colour=factor(cov))) +
+  facet_wrap(~Season)
 
-#Save out coords
-scores.winter <- scores(nmds.winter) %>% 
-  data.frame() %>% 
-  mutate(ID=rownames(scores(nmds.winter))) %>% 
-  separate(ID, into=c("PinpointID", "Season"))
-write.csv(scores.winter, "NMDSScores_Winter.csv", row.names = FALSE)
+ggplot(covscores) +
+  geom_point(aes(x=cov, y=NMDS2, colour=factor(cov))) +
+  facet_wrap(~Season)
 
+#SOMETHING WEIRD IS HAPPENING IN WINTER2 WITH INDIVIDUAL 443 AND ALSO WITH THE COVS
