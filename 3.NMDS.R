@@ -5,6 +5,11 @@ covs <- read.csv("Covariates_Breed&Winter.csv") %>%
   dplyr::filter(buffer=="2km")
 
 
+#SHOULD TRY LOOKING AT SEX DIFFERENCES TOO
+#NEED TO SELECT # OF AXES
+#NEED TO SELECT BEST EXTENT
+
+
 set.seed(1234)
 
 #Breeding----
@@ -79,5 +84,4 @@ scores.winter <- scores(nmds.winter) %>%
   mutate(ID=rownames(scores(nmds.winter))) %>% 
   separate(ID, into=c("PinpointID", "Season"))
 write.csv(scores.winter, "NMDSScores_Winter.csv", row.names = FALSE)
-  
-#SHOULD TRY LOOKING AT SEX DIFFERENCES TOO
+
