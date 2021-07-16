@@ -32,7 +32,10 @@ forest <- rbind(forest200, forest2000, forest20000) %>%
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
   arrange(PinpointID, DateTime) %>% 
   mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
-         ID = row_number())
+         ID = row_number(),
+         loss=100*loss,
+         treecover=100*treecover2000,
+         treecover2020=110*treecover2020) 
 
 #3. Wrangle human modification data from GEE----
 hm200 <- read.csv("Covariates/HumanModification_200.csv") %>% 
@@ -48,7 +51,8 @@ hm <- rbind(hm200, hm2000, hm20000) %>%
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
   arrange(PinpointID, DateTime) %>% 
   mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
-         ID = row_number())
+         ID = row_number(),
+         hm=100*hm)
 
 #4. Wrangle Copernicus landcover from GEE----
 lc200 <- read.csv("Covariates/Landcover_200.csv") %>% 
@@ -64,7 +68,7 @@ lc <- rbind(lc200, lc2000, lc20000) %>%
   dplyr::filter(Season2 %in% c("Breed1", "Breed2", "Winter", "Winter2")) %>% 
   arrange(PinpointID, DateTime) %>% 
   mutate(Season = ifelse(Season2 %in% c("Breed1", "Breed2"), "Breed", "Winter"),
-         ID = row_number())
+         ID = row_number()) 
 
 #5. Put all together and add other metadata for individuals----
 covs <- full_join(forest, hm) %>% 
