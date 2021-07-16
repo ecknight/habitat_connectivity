@@ -1,7 +1,8 @@
 library(tidyverse)
 library(vegan)
 
-covs <- read.csv("Covariates_Breed&Winter.csv")
+covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
+  dplyr::filter(buffer=="2km")
 
 
 set.seed(1234)
@@ -79,5 +80,4 @@ scores.winter <- scores(nmds.winter) %>%
   separate(ID, into=c("PinpointID", "Season"))
 write.csv(scores.winter, "NMDSScores_Winter.csv", row.names = FALSE)
   
-
 #SHOULD TRY LOOKING AT SEX DIFFERENCES TOO
