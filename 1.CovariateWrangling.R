@@ -1,5 +1,7 @@
 library(tidyverse)
 library(readxl)
+library(lubridate)
+library(suncalc)
 
 #OTHER LAYERS THAT I COULD ADD:
 #LIGHT POLLUTION
@@ -74,9 +76,14 @@ lc <- rbind(lc200, lc2000, lc20000) %>%
 covs <- full_join(forest, hm) %>% 
   full_join(lc) %>% 
   left_join(band) %>% 
+  mutate(DateTime = ymd_hms(DateTime)) %>% 
   left_join(dat %>% 
-              dplyr::select(PinpointID, Winter) %>% 
-              unique())
+              dplyr::select(PinpointID, Season2, DateTime, Lat, Long, Winter, Time) %>% 
+              unique() %>% 
+              mutate(DateTime=ymd_hms(DateTime))) %>% 
+  separate(DateTime, into=c("Date", "Time2"), sep=" ") %>% 
+  dplyr::select(-Time2) %>% 
+  mutate(DateTime=ymd_hms(paste0(Date, Time)))
   
 write.csv(covs, "Covariates_Breed&Winter.csv", row.names=FALSE)
 
