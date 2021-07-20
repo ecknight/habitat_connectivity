@@ -141,6 +141,7 @@ write.csv(scores, "NMDSScores_Bootstap.csv", row.names = FALSE)
 write.csv(covscores, "NMDSCovScores_Bootstap.csv", row.names = FALSE)
 
 #9. Look at variance----
+#Individual scores
 ggplot(scores) +
   geom_point(aes(x=PinpointID, y=NMDS1, colour=factor(PinpointID))) +
   facet_wrap(~Season)
@@ -150,6 +151,12 @@ ggplot(scores) +
   facet_wrap(~Season)
 #More variance in breeding, but looks like makes sense overall
 
+ggplot(scores %>% 
+         dplyr::filter(Season!="winter2")) +
+  geom_point(aes(x=NMDS1, y=NMDS2, colour=factor(PinpointID))) +
+  facet_wrap(~Season)
+
+#Habitat scores
 ggplot(covscores) +
   geom_point(aes(x=cov, y=NMDS1, colour=factor(cov))) +
   facet_wrap(~Season)
@@ -158,4 +165,20 @@ ggplot(covscores) +
   geom_point(aes(x=cov, y=NMDS2, colour=factor(cov))) +
   facet_wrap(~Season)
 
+ggplot(covscores %>% 
+         dplyr::filter(Season!="winter2")) +
+  geom_point(aes(x=NMDS1, y=NMDS2, colour=factor(cov))) +
+  facet_wrap(~Season)
+
+#10. Interrogate a bit----
+covscores.summary <- covscores %>% 
+  mutate(length = sqrt(NMDS1^2 + NMDS2^2)) %>% 
+  group_by(cov, Season) %>% 
+  summarize(length.mn = mean(length),
+            length.sd = sd(length)) %>% 
+  ungroup() %>% 
+  arrange(Season, -length.mn)
+View(covscores.summary)
+
 #SOMETHING WEIRD IS HAPPENING IN WINTER2 WITH INDIVIDUAL 443 AND ALSO WITH THE COVS
+#SOMETHING WEIRD IS HAPPENING WITH BREEDING - WEIRD MIRROR IMAGE ISSUE
