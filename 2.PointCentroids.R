@@ -104,9 +104,9 @@ dat.wint <- dat.trans %>%
 #Put together
 dat.cent <- rbind(dat.band, dat.breed.both, dat.breed2, dat.breed1, dat.wint) %>% 
   rename(Season = SeasonR2n) %>% 
-  mutate(Breed = case_when(Season=="Breed1" ~ 1,
-                           Season=="Breed2" ~ 2),
-         Winter = case_when(Season=="Winter" ~ 1,
+  mutate(SeasonID = case_when(Season=="Breed1" ~ 1,
+                           Season=="Breed2" ~ 2,
+                           Season=="Winter" ~ 1,
                             Season=="Winter2" ~ 2),
          Season = ifelse(Season %in% c("Breed1", "Breed2"), "Breed", "Winter"))
  
