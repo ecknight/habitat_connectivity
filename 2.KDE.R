@@ -132,3 +132,8 @@ area.winter <- dat.area.winter %>%
 area <- rbind(area.winter, area.breed) %>% 
   mutate(radius.mean = area.mean/(2*3.1416))
 area
+
+write.csv(area, "KDEArea.csv", row.names = FALSE)
+
+#B. WINTERING GROUNDS####
+
