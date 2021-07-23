@@ -136,4 +136,40 @@ area
 write.csv(area, "KDEArea.csv", row.names = FALSE)
 
 #B. WINTERING GROUNDS####
+dat.cent <- read.csv("BreedingWinterPoints.csv")
+dat.wint <- dat.cent %>% 
+  dplyr::filter(Season=="Winter") %>% 
+  st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
+  st_transform(crs=3857) %>% 
+  st_coordinates()
 
+#5. Calculate KDE for individuals with >= 5 points (minimum required)----
+dat.wint.sp <- SpatialPointsDataFrame(coords=dat.wint, 
+                                     data=data.frame(ID=rep(1, nrow(dat.wint))),
+                                     proj4string = CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
+
+kd.wint <- kernelUD(dat.wint.sp, grid = 1000, extent=2, h="href")
+
+kd.shp.95 <- getverticeshr(kd.wint, 95) %>% 
+  st_as_sf() %>% 
+  mutate(iso=95)
+kd.shp.75 <- getverticeshr(kd.wint, 75) %>% 
+  st_as_sf() %>% 
+  mutate(iso=75)
+kd.shp.50 <- getverticeshr(kd.wint, 50) %>% 
+  st_as_sf() %>% 
+  mutate(iso=50)
+kd.shp.25 <- getverticeshr(kd.wint, 25) %>% 
+  st_as_sf() %>% 
+  mutate(iso=25)
+kd.shp.05 <- getverticeshr(kd.wint, 5) %>% 
+  st_as_sf() %>% 
+  mutate(iso=5)
+
+kd.shp <- rbind(kd.shp.95, kd.shp.75, kd.shp.50, kd.shp.25, kd.shp.05)
+
+ggplot() +
+  geom_sf(data=kd.shp, aes(fill=iso)) +
+  geom_point(aes(x=X, y=Y), data=data.frame(dat.wint))
+
+write_sf(kd.shp, "Shapefiles/WinterRange.shp")
