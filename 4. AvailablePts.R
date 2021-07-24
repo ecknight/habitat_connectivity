@@ -68,6 +68,7 @@ birds.breed <- dat.cent %>%
 
 set.seed(1234)
 pts.breed <- st_sample(range.breed, 20*birds.breed) %>% 
+  st_transform(crs=3857) %>% 
   st_coordinates() %>% 
   data.frame() %>% 
   mutate(PinpointID = NA,
@@ -129,4 +130,6 @@ pts.all <- rbind(pts.available, pts.cent, pts.used)
 pts.all.sf <- pts.all %>% 
   st_as_sf(coords=c("X", "Y"), crs=3857)
 
-write_sf(pts.all.sf, "CONIMCP_CleanDataAll_Habitat_3857.shp", row.names = FALSE)
+plot(pts.all.sf)
+
+write_sf(pts.all.sf, "Shapefiles/CONIMCP_CleanDataAll_Habitat_3857.shp", append=FALSE)
