@@ -43,12 +43,14 @@ M.5
 corrplot(M.5)
 #Grass & tree -.79
 #Hm & stable lights 0.72
+#Hm & urban 0.77
 
 vif(covs.5)
-#Should probably take out tree...
+#Should probably take out tree & urban...
+#Also take out moss, not really relevant
 
 covs.5 <- covs %>% 
-  dplyr::select(hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
+  dplyr::select(hm.5, bare.5, crops.5, grass.5, shrub.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
 
 M.5 <- cor(covs.5, use="complete.obs")
 M.5
@@ -56,10 +58,10 @@ corrplot(M.5)
 #Hm & stable lights 0.72
 
 vif(covs.5)
-#Just under 5, let's go with it
+#Let's take out hm anyway
 
 covs.5 <- covs %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.5, crops.5, grass.5, shrub.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
 
 write.csv(covs.5, "Covariates_Breed&Winter_500.csv", row.names=FALSE)
 
@@ -75,10 +77,11 @@ corrplot(M.200)
 #Hm and roads 0.77
 
 vif(covs.200)
-#Should probably take out tree...
+#Should probably take out tree & urban...
+#Also take out moss, not really relevant
 
 covs.200 <- covs %>% 
-  dplyr::select(hm.200, bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+  dplyr::select(hm.200, bare.200, crops.200, grass.200, shrub.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
 
 M.200 <- cor(covs.200, use="complete.obs")
 M.200
@@ -88,7 +91,7 @@ vif(covs.200)
 #Also HM
 
 covs.200 <- covs %>% 
-  dplyr::select(bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+  dplyr::select(bare.200, crops.200, grass.200, shrub.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
 
 M.200 <- cor(covs.200, use="complete.obs")
 M.200
