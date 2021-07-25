@@ -9,8 +9,8 @@ pts.all.sf <- read_sf("Shapefiles/CONIMCP_CleanDataAll_Habitat_3857.shp") %>%
   mutate(ID = row_number())
 
 #2. Buffer----
-pts.5 <- st_buffer(pts.all.sf, 500)
-pts.200 <- st_buffer(pts.all.sf, 20000)
+pts.1 <- st_buffer(pts.all.sf, 1000)
+pts.10 <- st_buffer(pts.all.sf, 10000)
 
 #A. ROADS####
 #3. Read in roads data----
@@ -19,31 +19,31 @@ rds <- read_sf("Shapefiles/groads-v1-americas-shp/gROADS-v1-americas.shp") %>%
   dplyr::select(ROADID, LENGTH_KM, Shape_Leng, geometry)
 
 #4. Clip by buffers----
-rds.5 <- rds %>% 
-  st_intersection(pts.5)
+rds.1 <- rds %>% 
+  st_intersection(pts.1)
 
-rds.200 <- rds %>% 
-  st_intersection(pts.200)
+rds.10 <- rds %>% 
+  st_intersection(pts.10)
 
 #5. Calculate length per buffer----
-length.5 <- data.frame(Length.5 = st_length(rds.5)) %>% 
-  cbind(rds.5) %>% 
+length.1 <- data.frame(Length.1 = st_length(rds.1)) %>% 
+  cbind(rds.1) %>% 
   data.frame() %>% 
   group_by(ID) %>% 
-  summarize(Length.5 = sum(Length.5))
+  summarize(Length.1 = sum(Length.1))
 
-length.200 <- data.frame(Length.200 = st_length(rds.200)) %>% 
-  cbind(rds.200) %>% 
+length.10 <- data.frame(Length.10 = st_length(rds.10)) %>% 
+  cbind(rds.10) %>% 
   data.frame() %>% 
   group_by(ID) %>% 
-  summarize(Length.200 = sum(Length.200))
+  summarize(Length.10 = sum(Length.10))
   
 #6. Put back together----
 pts.rds <- pts.all.sf %>% 
-  left_join(length.5) %>% 
-  left_join(length.200) %>% 
-  mutate(Length.5 =ifelse(is.na(Length.5), 0, Length.5),
-         Length.200 = ifelse(is.na(Length.200), 0, Length.200))
+  left_join(length.1) %>% 
+  left_join(length.10) %>% 
+  mutate(Length.1 =ifelse(is.na(Length.1), 0, Length.1),
+         Length.10 = ifelse(is.na(Length.10), 0, Length.10))
 
 #B. PESTICIDES####
 #7. Get list of tifs----
@@ -60,7 +60,7 @@ table(tifs.use$Pesticide, tifs.use$Crop)
 tifs.use.list <- as.list(tifs.use)
 
 #9. Stack all tifs & calculate mean----
-stack.all <- raster::stack(tifs.use.list[["filepath"]])
+#stack.all <- raster::stack(tifs.use.list[["filepath"]])
 #stack.all.scale <- scale(stack.all)
 #pesticides.mean <- calc(stack.all.scale, fun=mean)
 
@@ -70,15 +70,15 @@ pesticides.mean <- raster("Shapefiles/PesticidesMean.tif") %>%
 plot(pesticides.mean)
 
 #10. Extract raster values----
-pest.200 <- raster::extract(pesticides.mean, pts.200, fun=mean, df=TRUE) %>% 
-  rename(pest.200 = PesticidesMean) 
-pest.5 <- raster::extract(pesticides.mean, pts.5, fun=mean, df=TRUE) %>% 
-  rename(pest.5 = PesticidesMean)
+pest.10 <- raster::extract(pesticides.mean, pts.10, fun=mean, df=TRUE) %>% 
+  rename(pest.10 = PesticidesMean) 
+pest.1 <- raster::extract(pesticides.mean, pts.1, fun=mean, df=TRUE) %>% 
+  rename(pest.1 = PesticidesMean)
 pest.pt <- raster::extract(pesticides.mean, pts.all.sf, df=TRUE) %>% 
   rename(pest.pt = PesticidesMean)
 
 #11. Put back together----
-pts.pest <- cbind(pts.all.sf, pest.200, pest.5, pest.pt) %>% 
+pts.pest <- cbind(pts.all.sf, pest.10, pest.1, pest.pt) %>% 
   data.frame() %>% 
   dplyr::select(-geometry, -ID.1, -ID.2, -ID.3)
 
