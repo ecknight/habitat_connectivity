@@ -10,30 +10,32 @@ library(data.table)
 #NEED TO SAVE OUT COVS SCORES TOO
 
 #1. Wrangle----
-covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
-  dplyr::filter(Winter==1,
-                buffer=="2km")
+dat.hab <- read.csv("CONIMCP_CleanDataAll_Habitat.csv") %>% 
+  dplyr::filter(Winter==1)
+  
+covs.5 <- read.csv("Covariates_Breed&Winter_500.csv") %>% 
+  dplyr::filter(Type=="Used") %>% 
+  dplyr::select(-Type) %>% 
+  left_join(dat.hab)
+covs.200 <- read.csv("Covariates_Breed&Winter_20000.csv") %>% 
+  dplyr::filter(Type=="Centroid")
 
-covs.breed <- covs %>% 
-  dplyr::filter(Season2 %in% c("Breed1", "Breed2")) %>% 
-  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
+covs.5.breed <- covs.5 %>% 
+  dplyr::filter(Season %in% c("Breed1", "Breed2")) %>% 
+  mutate(ID = paste0(PinpointID, "-", Season))
+covs.200.breed <- covs.200 %>% 
+  dplyr::filter(Season %in% c("Breed1", "Breed2")) %>% 
+  mutate(ID = paste0(PinpointID, "-", Season))
 
-covs.winter1 <- covs %>% 
-  dplyr::filter(Season2=="Winter") %>% 
-  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
+#Do I want to do separate analyses for 1st & 2nd grounds or just put all of them in 1 analysis? They need to be separate because it has to be same individuals between the 2 matrices
+covs.5.winter1 <- covs.5 %>% 
+  dplyr::filter(Season %in% c("Winter1")) %>% 
+  mutate(ID = paste0(PinpointID, "-", Season))
+covs.200.winter1 <- covs.200 %>% 
+  dplyr::filter(Season %in% c("Winter1")) %>% 
+  mutate(ID = paste0(PinpointID, "-", Season))
 
-ids.winter <- covs %>% 
-  dplyr::select(PinpointID, Season2) %>% 
-  dplyr::filter(Season2=="Winter2") %>% 
-  unique() %>% 
-  mutate(Winter2=1) %>% 
-  dplyr::select(-Season2)
-
-covs.winter2 <- covs %>% 
-  left_join(ids.winter) %>% 
-  mutate(Winter2=ifelse(is.na(Winter2), 0, Winter2)) %>% 
-  dplyr::filter((Winter2==1 & Season2=="Winter2") | (Winter2==0 & Season2=="Winter")) %>% 
-  dplyr::select(Population, Sex, PinpointID, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal)
+#TO DO: ADD IN 2ND WINTERING GROUND ANALYSIS LATER####
 
 #2. Set up bootstrap----
 boot <- 100
