@@ -15,12 +15,12 @@ band <- read_excel("tbl_band.xlsx") %>%
               dplyr::select(Population, Abbreviation))
 
 #2. Wrangle human modification data from GEE----
-hm5 <- read.csv("Covariates/HumanModification_500.csv") %>% 
+hm5 <- read.csv("Covariates/HumanModification_1km.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
-  rename(hm.5 = mean)
-hm200 <- read.csv("Covariates/HumanModification_20000.csv") %>% 
+  rename(hm.1 = mean)
+hm200 <- read.csv("Covariates/HumanModification_10km.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
-  rename(hm.200 = mean)
+  rename(hm.10 = mean)
 hmpt <- read.csv("Covariates/HumanModification_point.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
   rename(hm.pt = mean)
@@ -32,14 +32,14 @@ hm <- hm5 %>%
 #4. Wrangle Copernicus landcover from GEE----
 names <- read.csv("Covariates/Landcover_ClassNames.csv")
 
-lc5 <- read.csv("Covariates/Landcover_500.csv") %>% 
+lc5 <- read.csv("Covariates/Landcover_1km.csv") %>% 
   dplyr::select(-system.index, -ID, -.geo) %>% 
   rename_with(.cols = c("bare.coverfraction":"water.seasonal.coverfraction"),
-              ~ paste0(., ".5"))
-lc200 <- read.csv("Covariates/Landcover_20000.csv") %>% 
+              ~ paste0(., ".1"))
+lc200 <- read.csv("Covariates/Landcover_10km.csv") %>% 
   dplyr::select(-system.index, -ID, -.geo) %>% 
   rename_with(.cols = c("bare.coverfraction":"water.seasonal.coverfraction"),
-              ~ paste0(., ".200"))
+              ~ paste0(., ".10"))
 lcpt <- read.csv("Covariates/Landcover_point.csv") %>% 
   dplyr::select(-system.index, -ID, -.geo) %>% 
   rename(lc = first)
@@ -49,12 +49,12 @@ lc <- lc5 %>%
   left_join(lcpt)
 
 #5. Wrangle light pollution from GEE----
-light5 <- read.csv("Covariates/LightPollution_500.csv") %>% 
-  rename(stable.lights.5 = F182013_stable_lights) %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, stable.lights.5)
-light200 <- read.csv("Covariates/LightPollution_20000.csv") %>% 
-  rename(stable.lights.200 = F182013_stable_lights) %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, stable.lights.200)
+light5 <- read.csv("Covariates/LightPollution_1km.csv") %>% 
+  rename(stable.lights.1 = F182013_stable_lights) %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, stable.lights.1)
+light200 <- read.csv("Covariates/LightPollution_10km.csv") %>% 
+  rename(stable.lights.10 = F182013_stable_lights) %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, stable.lights.10)
 lightpt <- read.csv("Covariates/LightPollution_point.csv") %>% 
   rename(stable.lights.pt = F182013_stable_lights) %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, stable.lights.pt)
@@ -64,12 +64,12 @@ light <- light5 %>%
   left_join(lightpt)
 
 #6. Wrangle drought data from GEE----
-drought5 <- read.csv("Covariates/Drought_500.csv") %>% 
+drought5 <- read.csv("Covariates/Drought_1km.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
-  rename(drought.5 = mean)
-drought200 <- read.csv("Covariates/Drought_20000.csv") %>% 
+  rename(drought.1 = mean)
+drought200 <- read.csv("Covariates/Drought_10km.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
-  rename(drought.200 = mean)
+  rename(drought.10 = mean)
 droughtpt <- read.csv("Covariates/Drought_point.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, mean) %>% 
   rename(drought.pt = mean)
@@ -94,7 +94,7 @@ covs <- hm %>%
   arrange(X, Y, PinpointID, Season, DateTime, Type, Radius) %>% 
   mutate(ID = row_number()) %>% 
   left_join(pts.covs) %>% 
-  dplyr::select(-discrete_classification.5, -discrete_classification.proba.5, -change.confidence.5, -data.density.indicator.5, -forest_type.5, -snow.coverfraction.5, -discrete_classification.200, -discrete_classification.proba.200, -change.confidence.200, -data.density.indicator.200, -forest_type.200, -snow.coverfraction.200, -ID)
+  dplyr::select(-discrete_classification.1, -discrete_classification.proba.1, -change.confidence.1, -data.density.indicator.1, -forest_type.1, -snow.coverfraction.1, -discrete_classification.10, -discrete_classification.proba.10, -change.confidence.10, -data.density.indicator.10, -forest_type.10, -snow.coverfraction.10, -ID)
 summary(covs)
   
 write.csv(covs, "Covariates_Breed&Winter.csv", row.names=FALSE)
