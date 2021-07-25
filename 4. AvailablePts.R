@@ -16,11 +16,11 @@ area <- read.csv("KDEArea.csv") %>%
 dat.area <- dat.cent %>% 
   left_join(area)
 
-#3. Random points within 0.5 km----
+#3. Random points within 1 km----
 buff.small <- dat.cent %>% 
   st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
   st_transform(crs=3857) %>% 
-  st_buffer(dist=500) %>% 
+  st_buffer(dist=1000) %>% 
   arrange(PinpointID, Season)
   
 ids <- data.frame(PinpointID = rep(buff.small$PinpointID, 20),
@@ -34,13 +34,29 @@ pts.small <- st_sample(buff.small, size=rep(20, nrow(buff.small))) %>%
   cbind(ids) %>% 
   mutate(DateTime = NA,
          Type="Available",
-         Radius="500m")
+         Radius="1km")
 
 #4. Random points within 20 km----
+buff.medium <- dat.cent %>% 
+  st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
+  st_transform(crs=3857) %>% 
+  st_buffer(dist=10000) %>% 
+  arrange(PinpointID, Season)
+
+set.seed(1234)
+pts.medium <- st_sample(buff.medium, size=rep(20, nrow(buff.medium))) %>% 
+  st_coordinates() %>% 
+  data.frame() %>% 
+  cbind(ids) %>% 
+  mutate(DateTime = NA,
+         Type="Available",
+         Radius="10km")
+
+#5. Random points within 100 km----
 buff.large <- dat.cent %>% 
   st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
   st_transform(crs=3857) %>% 
-  st_buffer(dist=20000) %>% 
+  st_buffer(dist=100000) %>% 
   arrange(PinpointID, Season)
 
 set.seed(1234)
@@ -50,9 +66,9 @@ pts.large <- st_sample(buff.large, size=rep(20, nrow(buff.large))) %>%
   cbind(ids) %>% 
   mutate(DateTime = NA,
          Type="Available",
-         Radius="20km")
+         Radius="100km")
 
-#5. Random points within the breeding range----
+#6. Random points within the breeding range----
 #Use extended range from BBS paper
 #THINK ABOUT WHETHER THIS IS PROBLEMATIC GIVEN THAT THESE ARE HAND SELECTED
 
@@ -77,7 +93,7 @@ pts.breed <- st_sample(range.breed, 20*birds.breed) %>%
          Type="Available",
          Radius="Breed")
 
-#6. Random points within the wintering range----
+#7. Random points within the wintering range----
 
 kd.wint <- read_sf("Shapefiles/WinterRange.shp") %>% 
   dplyr::filter(iso==95)
@@ -100,7 +116,7 @@ pts.wint <- st_sample(kd.wint, 20*birds.wint) %>%
          Type="Available",
          Radius="Winter")
 
-#6. Put together----
+#8. Put together----
 pts.available <- rbind(pts.small, pts.large, pts.breed, pts.wint)
 
 pts.cent <- dat.cent %>% 
@@ -128,7 +144,7 @@ pts.all <- rbind(pts.available, pts.cent, pts.used)
 
 write.csv(pts.all, "CONIMCP_CleanDataAll_Habitat_3857.csv", row.names = FALSE)
 
-#7. Export for GEE----
+#9. Export for GEE----
 pts.all.sf <- pts.all %>% 
   st_as_sf(coords=c("X", "Y"), crs=3857) %>% 
   cbind(pts.all %>% 
