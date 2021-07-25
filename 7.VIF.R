@@ -29,6 +29,11 @@ corrplot(M.pt)
 vif(covs.pt)
 #But everything ok
 
+covs.pt <- covs %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, lc, hm.pt, stable.lights.pt, drought.pt, pest.pt)
+
+write.csv(covs.pt, "Covariates_Breed&Winter_Point.csv", row.names=FALSE)
+
 #4. 500m radius----
 covs.5 <- covs %>% 
   dplyr::select(hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, tree.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
@@ -52,6 +57,11 @@ corrplot(M.5)
 
 vif(covs.5)
 #Just under 5, let's go with it
+
+covs.5 <- covs %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
+
+write.csv(covs.5, "Covariates_Breed&Winter_500.csv", row.names=FALSE)
 
 #5. 20km radius----
 covs.200 <- covs %>% 
@@ -86,3 +96,8 @@ corrplot(M.200)
 
 vif(covs.200)
 #good
+
+covs.200 <- covs %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+
+write.csv(covs.200, "Covariates_Breed&Winter_20000.csv", row.names=FALSE)
