@@ -117,7 +117,7 @@ pts.wint <- st_sample(kd.wint, 20*birds.wint) %>%
          Radius="Winter")
 
 #8. Put together----
-pts.available <- rbind(pts.small, pts.large, pts.breed, pts.wint)
+pts.available <- rbind(pts.small, pts.medium, pts.large, pts.breed, pts.wint)
 
 pts.cent <- dat.cent %>% 
   st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
