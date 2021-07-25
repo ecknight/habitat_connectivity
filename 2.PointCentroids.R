@@ -118,5 +118,9 @@ nrow(dat.cent %>%
   dplyr::select(PinpointID) %>% 
   unique())
 #same as connectivity profile paper. good
+table(dat.cent %>% 
+        dplyr::select(PinpointID, Population) %>% 
+        unique() %>% 
+        select(Population))
 
 write.csv(dat.cent, "BreedingWinterPoints.csv", row.names=FALSE)
