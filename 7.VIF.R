@@ -63,7 +63,7 @@ vif(covs.1)
 covs.1 <- covs %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1)
 
-write.csv(covs.1, "Covariates_Breed&Winter_500.csv", row.names=FALSE)
+write.csv(covs.1, "Covariates_Breed&Winter_1km.csv", row.names=FALSE)
 
 #5. 20km radius----
 covs.10 <- covs %>% 
@@ -92,4 +92,4 @@ vif(covs.10)
 covs.10 <- covs %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.10, crops.10, grass.10, moss.10, shrub.10, urban.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10)
 
-write.csv(covs.10, "Covariates_Breed&Winter_20000.csv", row.names=FALSE)
+write.csv(covs.10, "Covariates_Breed&Winter_10km.csv", row.names=FALSE)
