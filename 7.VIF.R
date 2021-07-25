@@ -6,7 +6,8 @@ options(scipen = 999)
 
 #1. Wrangling----
 covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
-  rename_all(~gsub(., pattern=".coverfraction", replacement=""))
+  rename_all(~gsub(., pattern=".coverfraction", replacement="")) %>% 
+  rename_all(~gsub(., pattern="stable.lights", replacement="light"))
 str(covs)
 
 #2. All variables---
@@ -19,88 +20,76 @@ corrplot(M)
 
 #3. Point level----
 covs.pt <- covs %>% 
-  dplyr::select(hm.pt, stable.lights.pt, drought.pt, pest.pt)
+  dplyr::select(hm.pt, light.pt, drought.pt, pest.pt)
 
 M.pt <- cor(covs.pt, use="complete.obs")
 M.pt
 corrplot(M.pt)
-#Lights & hm are at .71 correlation
+#Lights & hm are at .70 correlation
 
 vif(covs.pt)
 #But everything ok
 
 covs.pt <- covs %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, lc, hm.pt, stable.lights.pt, drought.pt, pest.pt)
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, lc, hm.pt, light.pt, drought.pt, pest.pt)
 
 write.csv(covs.pt, "Covariates_Breed&Winter_Point.csv", row.names=FALSE)
 
 #4. 500m radius----
-covs.5 <- covs %>% 
-  dplyr::select(hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, tree.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
+covs.1 <- covs %>% 
+  dplyr::select(hm.1, bare.1, crops.1, grass.1, moss.1, shrub.1, tree.1, urban.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1)
 
-M.5 <- cor(covs.5, use="complete.obs")
-M.5
-corrplot(M.5)
-#Grass & tree -.79
+M.1 <- cor(covs.1, use="complete.obs")
+M.1
+corrplot(M.1)
+#Grass & tree -.80
+#Hm & lights 0.71
+
+vif(covs.1)
+#Should probably take out tree & hm
+#Also take out moss & urban, not really relevant
+
+covs.1 <- covs %>% 
+  dplyr::select(bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1)
+
+M.1 <- cor(covs.1, use="complete.obs")
+M.1
+corrplot(M.1)
 #Hm & stable lights 0.72
-#Hm & urban 0.77
 
-vif(covs.5)
-#Should probably take out tree & urban...
-#Also take out moss, not really relevant
-
-covs.5 <- covs %>% 
-  dplyr::select(hm.5, bare.5, crops.5, grass.5, shrub.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
-
-M.5 <- cor(covs.5, use="complete.obs")
-M.5
-corrplot(M.5)
-#Hm & stable lights 0.72
-
-vif(covs.5)
+vif(covs.1)
 #Let's take out hm anyway
 
-covs.5 <- covs %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.5, crops.5, grass.5, shrub.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
+covs.1 <- covs %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1)
 
-write.csv(covs.5, "Covariates_Breed&Winter_500.csv", row.names=FALSE)
+write.csv(covs.1, "Covariates_Breed&Winter_500.csv", row.names=FALSE)
 
 #5. 20km radius----
-covs.200 <- covs %>% 
-  dplyr::select(hm.200, bare.200, crops.200, grass.200, moss.200, shrub.200, tree.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+covs.10 <- covs %>% 
+  dplyr::select(hm.10, bare.10, crops.10, grass.10, moss.10, shrub.10, tree.10, urban.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10)
 
-M.200 <- cor(covs.200, use="complete.obs")
-M.200
-corrplot(M.200)
+M.10 <- cor(covs.10, use="complete.obs")
+M.10
+corrplot(M.10)
 #Grass & tree -.81
-#Hm & stable lights 0.71
-#Hm and roads 0.77
+#Hm & lights 0.71
 
-vif(covs.200)
-#Should probably take out tree & urban...
-#Also take out moss, not really relevant
+vif(covs.10)
+#Should probably take out tree & hm
+#Also take out moss & urban, not really relevant
 
-covs.200 <- covs %>% 
-  dplyr::select(hm.200, bare.200, crops.200, grass.200, shrub.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+covs.10 <- covs %>% 
+  dplyr::select(bare.10, crops.10, grass.10, shrub.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10)
 
-M.200 <- cor(covs.200, use="complete.obs")
-M.200
-corrplot(M.200)
+M.10 <- cor(covs.10, use="complete.obs")
+M.10
+corrplot(M.10)
 
-vif(covs.200)
-#Also HM
-
-covs.200 <- covs %>% 
-  dplyr::select(bare.200, crops.200, grass.200, shrub.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
-
-M.200 <- cor(covs.200, use="complete.obs")
-M.200
-corrplot(M.200)
-
-vif(covs.200)
+vif(covs.10)
 #good
 
-covs.200 <- covs %>% 
-  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+covs.10 <- covs %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, bare.10, crops.10, grass.10, moss.10, shrub.10, urban.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10)
 
-write.csv(covs.200, "Covariates_Breed&Winter_20000.csv", row.names=FALSE)
+write.csv(covs.10, "Covariates_Breed&Winter_20000.csv", row.names=FALSE)
