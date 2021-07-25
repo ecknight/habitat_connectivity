@@ -93,7 +93,8 @@ covs <- hm %>%
   mutate_all(~ifelse(.=="", NA, .)) %>% 
   arrange(X, Y, PinpointID, Season, DateTime, Type, Radius) %>% 
   mutate(ID = row_number()) %>% 
-  left_join(pts.covs)
+  left_join(pts.covs) %>% 
+  dplyr::select(-discrete_classification.5, -discrete_classification.proba.5, -change.confidence.5, -data.density.indicator.5, -forest_type.5, -snow.coverfraction.5, -discrete_classification.200, -discrete_classification.proba.200, -change.confidence.200, -data.density.indicator.200, -forest_type.200, -snow.coverfraction.200, -ID)
 summary(covs)
   
 write.csv(covs, "Covariates_Breed&Winter.csv", row.names=FALSE)
