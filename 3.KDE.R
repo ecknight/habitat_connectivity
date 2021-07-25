@@ -130,7 +130,7 @@ area.winter <- dat.area.winter %>%
   mutate(season="Winter")
 
 area <- rbind(area.winter, area.breed) %>% 
-  mutate(radius.mean = area.mean/(2*3.1416))
+  mutate(radius.mean = sqrt(area.mean/3.1416))
 area
 
 write.csv(area, "KDEArea.csv", row.names = FALSE)
@@ -149,6 +149,12 @@ dat.wint.sp <- SpatialPointsDataFrame(coords=dat.wint,
                                      proj4string = CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
 
 kd.wint <- kernelUD(dat.wint.sp, grid = 1000, extent=2, h="href")
+
+kd.area.wint <- kernel.area(kd.wint, percent=95,
+                      unin="m", unout="km2",
+                      standardize = FALSE)
+kd.area.wint
+sqrt(kd.area.wint/3.1416)
 
 kd.shp.95 <- getverticeshr(kd.wint, 95) %>% 
   st_as_sf() %>% 
