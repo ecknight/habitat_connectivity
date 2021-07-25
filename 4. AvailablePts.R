@@ -126,9 +126,13 @@ pts.used <- dat.hab %>%
 
 pts.all <- rbind(pts.available, pts.cent, pts.used)
 
+write.csv(pts.all, "CONIMCP_CleanDataAll_Habitat_3857.csv", row.names = FALSE)
+
 #7. Export for GEE----
 pts.all.sf <- pts.all %>% 
-  st_as_sf(coords=c("X", "Y"), crs=3857)
+  st_as_sf(coords=c("X", "Y"), crs=3857) %>% 
+  cbind(pts.all %>% 
+          dplyr::select(X, Y))
 
 plot(pts.all.sf)
 
