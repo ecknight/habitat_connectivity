@@ -1,86 +1,88 @@
 library(tidyverse)
 library(usdm)
 library(corrplot)
-library(Rnalytica)
 
 options(scipen = 999)
 
 #1. Wrangling----
 covs <- read.csv("Covariates_Breed&Winter.csv") %>% 
-  dplyr::filter(Winter==1)
+  rename_all(~gsub(., pattern=".coverfraction", replacement=""))
+str(covs)
 
 #2. All variables---
 covs.vif <- covs %>% 
-  dplyr::select(buffer, loss, treecover2000, treecover2020, hm, bare, crops, grass, moss, shrub, snow, tree, urban, water.permanent, water.seasonal) %>% 
-  group_by(buffer) %>% 
-  mutate(ID=row_number()) %>% 
-  pivot_wider(id_cols=ID, names_from=buffer, values_from = c(loss:water.seasonal)) %>% 
-  dplyr::select(-ID) %>% 
-  data.frame()
+  dplyr::select(-PinpointID, -Season, -DateTime, -Type, -Radius, -X, -Y, -lc)
 
-M <- cor(covs.vif)
+M <- cor(covs.vif, use="complete.obs")
 corrplot(M)
+#Ok let's split out into scale
 
-#3. Take out some stuff----
-covs.vif <- covs %>% 
-  dplyr::filter(buffer!="2km") %>% 
-  dplyr::select(buffer, loss, hm, bare, crops, grass, shrub, tree, water.permanent, water.seasonal) %>% 
-  group_by(buffer) %>% 
-  mutate(ID=row_number()) %>% 
-  pivot_wider(id_cols=ID, names_from=buffer, values_from = c(loss:water.seasonal)) %>% 
-  dplyr::select(-ID) %>% 
-  data.frame()
+#3. Point level----
+covs.pt <- covs %>% 
+  dplyr::select(hm.pt, stable.lights.pt, drought.pt, pest.pt)
 
-M <- cor(covs.vif)
-corrplot(M)
+M.pt <- cor(covs.pt, use="complete.obs")
+M.pt
+corrplot(M.pt)
+#Lights & hm are at .71 correlation
 
-vif(covs.vif)
+vif(covs.pt)
+#But everything ok
 
-#4. Try taking out tree----
-covs.vif <- covs %>% 
-  dplyr::filter(buffer!="2km") %>% 
-  dplyr::select(buffer, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal) %>% 
-  group_by(buffer) %>% 
-  mutate(ID=row_number()) %>% 
-  pivot_wider(id_cols=ID, names_from=buffer, values_from = c(loss:water.seasonal)) %>% 
-  dplyr::select(-ID) %>% 
-  data.frame()
+#4. 500m radius----
+covs.5 <- covs %>% 
+  dplyr::select(hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, tree.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
 
-M <- cor(covs.vif)
-M
-corrplot(M)
+M.5 <- cor(covs.5, use="complete.obs")
+M.5
+corrplot(M.5)
+#Grass & tree -.79
+#Hm & stable lights 0.72
 
-vif(covs.vif)
+vif(covs.5)
+#Should probably take out tree...
 
-#5. Try using only one extent but keeping tree----
-covs.vif <- covs %>% 
-  dplyr::filter(buffer=="2km") %>% 
-  dplyr::select(buffer, loss, hm, tree, bare, crops, grass, shrub, water.permanent, water.seasonal) %>% 
-  group_by(buffer) %>% 
-  mutate(ID=row_number()) %>% 
-  pivot_wider(id_cols=ID, names_from=buffer, values_from = c(loss:water.seasonal)) %>% 
-  dplyr::select(-ID) %>% 
-  data.frame()
+covs.5 <- covs %>% 
+  dplyr::select(hm.5, bare.5, crops.5, grass.5, moss.5, shrub.5, urban.5, water.permanent.5, water.seasonal.5, stable.lights.5, drought.5, Length.5, pest.5)
 
-M <- cor(covs.vif)
-M
-corrplot(M)
+M.5 <- cor(covs.5, use="complete.obs")
+M.5
+corrplot(M.5)
+#Hm & stable lights 0.72
 
-vif(covs.vif) #Nope too correlated with grass
+vif(covs.5)
+#Just under 5, let's go with it
 
-#6. Final selection----
-covs.vif <- covs %>% 
-  dplyr::filter(buffer=="2km") %>% 
-  dplyr::select(buffer, loss, hm, bare, crops, grass, shrub, water.permanent, water.seasonal) %>% 
-  group_by(buffer) %>% 
-  mutate(ID=row_number()) %>% 
-  pivot_wider(id_cols=ID, names_from=buffer, values_from = c(loss:water.seasonal)) %>% 
-  dplyr::select(-ID) %>% 
-  data.frame()
+#5. 20km radius----
+covs.200 <- covs %>% 
+  dplyr::select(hm.200, bare.200, crops.200, grass.200, moss.200, shrub.200, tree.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
 
-M <- cor(covs.vif)
-M
-corrplot(M) #Interesting that shrub & loss are correlated!
+M.200 <- cor(covs.200, use="complete.obs")
+M.200
+corrplot(M.200)
+#Grass & tree -.81
+#Hm & stable lights 0.71
+#Hm and roads 0.77
 
-vif(covs.vif)
-#Pick extent in next step of nmds via lowest stress
+vif(covs.200)
+#Should probably take out tree...
+
+covs.200 <- covs %>% 
+  dplyr::select(hm.200, bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+
+M.200 <- cor(covs.200, use="complete.obs")
+M.200
+corrplot(M.200)
+
+vif(covs.200)
+#Also HM
+
+covs.200 <- covs %>% 
+  dplyr::select(bare.200, crops.200, grass.200, moss.200, shrub.200, urban.200, water.permanent.200, water.seasonal.200, stable.lights.200, drought.200, Length.200, pest.200)
+
+M.200 <- cor(covs.200, use="complete.obs")
+M.200
+corrplot(M.200)
+
+vif(covs.200)
+#good
