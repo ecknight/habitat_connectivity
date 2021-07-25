@@ -1,5 +1,6 @@
 library(tidyverse)
 library(sf)
+library(raster)
 
 options(scipen=999)
 
@@ -45,4 +46,30 @@ pts.rds <- pts.all.sf %>%
          Length200 = ifelse(is.na(Length200), 0, Length200))
 
 #B. PESTICIDES####
-#7. Read in Chemgrids----
+#7. Get list of tifs----
+tifs <- data.frame(file=list.files("/Users/ellyknight/Downloads/ferman-v1-pest-chemgrids-v1-01-geotiff/ApplicationRate/GEOTIFF")) %>% 
+  separate(file, into=c("APR", "Crop", "Pesticide", "Year", "Level"), sep="_", remove=FALSE) %>% 
+  mutate(Level = str_sub(Level, 1, 1),
+         filepath = paste0("/Users/ellyknight/Downloads/ferman-v1-pest-chemgrids-v1-01-geotiff/ApplicationRate/GEOTIFF/", file))
+
+#8. Select which tifs to use----
+tifs.use <- tifs %>% 
+  dplyr::filter(Year==2015, Level=="H")
+table(tifs.use$Pesticide, tifs.use$Crop)
+
+tifs.use.list <- as.list(tifs.use)
+
+#9. Stack all tifs & calculate mean----
+stack.all <- raster::stack(tifs.use.list[["filepath"]])
+stack.all.scale <- scale(stack.all)
+pesticides.mean <- calc(stack.all, fun=mean)
+
+writeRaster(pesticides.mean, "Shapefiles/PesticidesMean.tif")
+pesticides.mean <- raster("Shapefiles/PesticidesMean.tif")
+
+#10. Extract raster values----
+pest.200 <- raster::extract(pesticides.mean, pts.200, fun=mean, df=TRUE)
+pest.5 <- raster::extract(pesticides.mean, pts.5, fun=mean, df=TRUE)
+pest.pt <- raster::extract(pesticides.mean, pts, df=TRUE)
+
+#11. Put back together----
