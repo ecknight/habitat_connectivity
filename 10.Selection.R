@@ -63,183 +63,80 @@ covs <- read.csv("Covariates_Breed&Winter_VIF.csv") %>%
   mutate(Population = ifelse(is.na(Population), Population2, Population)) %>% 
   dplyr::select(-Population2)
 
-#A. SECOND ORDER####
-#include 500 m radius and 20 km radius
-#Compare centroids to range (don't need random effects)
-
-#2. Wrangle----
-#2a. 1km
-covs.3rd <- covs %>% 
-  dplyr::filter(Type %in% c("Centroid", "Available"),
-                Radius %in% c("Breed", "Winter", NA)) %>% 
-  mutate(Response = case_when(Type=="Centroid" ~ 1,
-                              Type=="Available" ~ 0))
-
-covs.3rd.breed <- covs.3rd %>% 
-  dplyr::filter(Season %in% c("Breed1", "Breed2", NA))
-
-covs.3rd.winter1 <- covs.3rd %>% 
-  dplyr::filter(Season %in% c("Winter1", NA))
-
-#3. Winter selection----
-#3a. 1km
-mod.3rd.winter1.glob <- lm(Response ~ bare.1 + crops.1 + grass.1 + shrub.1 + water.permanent.1 + water.seasonal.1 + light.1 + Length.1 + pest.1 + drought.1, data=covs.3rd.winter1, na.action="na.fail")
-summary(mod.3rd.winter1.glob)
-
-mod.3rd.winter1.d <- dredge(mod.3rd.winter1.glob)
-mod.3rd.winter1.d
-#shrub, drought, grass, crop
-
-mod.3rd.winter1 <- lm(Response ~ crops.1 + grass.1 + shrub.1 + drought.1, data=covs.3rd.winter1, na.action="na.fail")
-summary(mod.3rd.winter1)
-
-#3b. 10km
-mod.3rd.winter1.glob <- lm(Response ~ bare.10 + crops.10 + grass.10 + shrub.10 + water.permanent.10 + water.seasonal.10 + light.10 + Length.10 + pest.10 + drought.10, data=covs.3rd.winter1, na.action="na.fail")
-summary(mod.3rd.winter1.glob)
-mod.3rd.winter1.d <- dredge(mod.3rd.winter1.glob)
-mod.3rd.winter1.d
-#drought, grass, shrub, permanent water, road length
-
-mod.3rd.winter1 <- lm(Response ~ water.permanent.10 + grass.10 + shrub.10 + drought.10 + Length.10, data=covs.3rd.winter1, na.action="na.fail")
-summary(mod.3rd.winter1)
-
-#4. Breeding selection----
-#4a. 1km
-mod.3rd.breed.glob <- lm(Response ~ bare.1 + crops.1 + grass.1 + shrub.1 + water.permanent.1 + water.seasonal.1 + light.1 + Length.1 + pest.1 + drought.1, data=covs.3rd.breed, na.action="na.fail")
-summary(mod.3rd.breed.glob)
-mod.3rd.breed.d <- dredge(mod.3rd.breed.glob)
-mod.3rd.breed.d
-#crop, drought, length, shrub, light
-
-mod.3rd.breed <- lm(Response ~ crops.1 + shrub.1 + drought.1 + Length.1 + light.1, data=covs.3rd.breed, na.action="na.fail")
-summary(mod.3rd.breed)
-
-#4b. 10km
-mod.3rd.breed.glob <- lm(Response ~ bare.10 + crops.10 + grass.10 + shrub.10 + water.permanent.10 + water.seasonal.10 + light.10 + Length.10 + pest.10 + drought.10, data=covs.3rd.breed, na.action="na.fail")
-summary(mod.3rd.breed.glob)
-mod.3rd.breed.d <- dredge(mod.3rd.breed.glob)
-mod.3rd.breed.d
-#drought, shrub, light
-
-mod.10.3rd.breed <- lm(Response ~ shrub.10 + drought.10 + light.10 + Length.10, data=covs.10.3rd.breed, na.action="na.fail")
-summary(mod.10.3rd.breed)
-
-#Ok, but what does 2nd order selection really tell us in regards to our actual question about grouping of individuals in populations & habitat use? Nothing. But it's fun to know.
-
-#B. THIRD ORDER####
-
-#5. Wrangle----
-#5a. 1km availability: use point level data
-covs.pt.2nd <- covs.pt %>% 
-  dplyr::filter(Type %in% c("Used", "Available"),
-                Radius %in% c("1km", NA)) %>% 
-  mutate(Response = case_when(Type=="Used" ~ 1,
-                              Type=="Available" ~ 0))
-
-covs.pt.2nd.breed <- covs.pt.2nd %>% 
-  dplyr::filter(Season %in% c("Breed1", "Breed2", "Breed"))
-
-covs.pt.2nd.winter1 <- covs.pt.2nd %>% 
-  dplyr::filter(Season %in% c("Winter"))
-
-#5b. 10km availability: use 1km buffer data
-covs.1.2nd <- covs.1 %>% 
+#4. Wrangle for selection----
+covs.sel <- covs %>% 
   dplyr::filter(Type %in% c("Used", "Available"),
                 Radius %in% c("100km", NA)) %>% 
   mutate(Response = case_when(Type=="Used" ~ 1,
                               Type=="Available" ~ 0))
 
-covs.1.2nd.breed <- covs.1.2nd %>% 
+covs.breed <- covs.sel %>% 
   dplyr::filter(Season %in% c("Breed1", "Breed2", "Breed"))
 
-covs.1.2nd.winter1 <- covs.1.2nd %>% 
+covs.winter1 <- covs.sel %>% 
   dplyr::filter(Season %in% c("Winter"))
 
-#5c. 100km availability: use 10km buffer data
-covs.10.2nd <- covs.10 %>% 
-  dplyr::filter(Type %in% c("Used", "Available"),
-                Radius %in% c("100km", NA)) %>% 
-  mutate(Response = case_when(Type=="Used" ~ 1,
-                              Type=="Available" ~ 0))
-
-covs.10.2nd.breed <- covs.10.2nd %>% 
-  dplyr::filter(Season %in% c("Breed1", "Breed2", "Breed"))
-
-covs.10.2nd.winter1 <- covs.10.2nd %>% 
-  dplyr::filter(Season %in% c("Winter"))
-
-#6. Winter selection----
-
-#TO DO: THINK ABOUT ROLE OF POPULATION IN THESE MODELS: DO I NEED AN INTERACTION?####
-#TO DO: THINK ABOUT BUFFER EXTENT FOR EACH AVAILABILITY EXTENT A BIT MORE####
-
-#6a. 1km availability: use point value data
-mod.pt.2nd.winter1.glob <- lmer(Response ~ factor(lc) + hm.pt + light.pt + drought.pt + pest.pt + factor(Population) +(1|PinpointID), data=covs.pt.2nd.winter1, na.action="na.fail")
-
-mod.pt.2nd.winter1.d <- dredge(mod.pt.2nd.winter1.glob, trace=2)
-mod.pt.2nd.winter1.d
-#null
-
-#6b. 10km extent availability: use 1km radius data
-mod.1.2nd.winter1.glob <- lmer(Response ~ bare.1 + crops.1 + grass.1 + shrub.1 + water.permanent.1 + water.seasonal.1 + light.1 + Length.1 + pest.1 + drought.1 + factor(Population) +(1|PinpointID), data=covs.1.2nd.winter1, na.action="na.fail")
-
-mod.1.2nd.winter1.d <- dredge(mod.1.2nd.winter1.glob, trace=2)
-mod.1.2nd.winter1.d
-#shrub, road, grass
-
-mod.1.2nd.winter1.glob <- lmer(Response ~ grass.1 + shrub.1 + Length.1 + (1|PinpointID), data=covs.1.2nd.winter1, na.action="na.fail")
-summary(mod.1.2nd.winter1.glob)
-
-#6c. 100km extent availability: use 10km radius data
-mod.10.2nd.winter1.glob <- lmer(Response ~ bare.10 + crops.10 + grass.10 + shrub.10 + water.permanent.10 + water.seasonal.10 + light.10 + Length.10 + pest.10 + drought.10 + factor(Population) +(1|PinpointID), data=covs.10.2nd.winter1, na.action="na.fail")
-
-mod.10.2nd.winter1.d <- dredge(mod.10.2nd.winter1.glob, trace=2)
-mod.10.2nd.winter1.d
-#grass, drought
-
-mod.10.2nd.winter1.glob <- lmer(Response ~ grass.10 + drought.10 + (1|PinpointID), data=covs.10.2nd.winter1, na.action="na.fail")
-summary(mod.10.2nd.winter1.glob)
-
-#7. Breeding selection----
-
-#7a. 1km availability: use point value data
-mod.pt.2nd.breed.glob <- lmer(Response ~ factor(lc) + hm.pt + light.pt + drought.pt + pest.pt + factor(Population) +(1|PinpointID), data=covs.pt.2nd.breed, na.action="na.fail")
-
-mod.pt.2nd.breed.d <- dredge(mod.pt.2nd.breed.glob, trace=2)
-mod.pt.2nd.breed.d
-#null
-
-#7b. 10km extent availability: use 1km radius data
-mod.1.2nd.breed.glob <- lmer(Response ~ bare.1 + crops.1 + grass.1 + shrub.1 + water.permanent.1 + water.seasonal.1 + light.1 + Length.1 + pest.1 + drought.1 + factor(Population) +(1|PinpointID), data=covs.1.2nd.breed, na.action="na.fail")
-
-mod.1.2nd.breed.d <- dredge(mod.1.2nd.breed.glob, trace=2)
-mod.1.2nd.breed.d
-#crop, light, permanent water
-
-mod.1.2nd.breed <- lmer(Response ~ crops.1 + light.1 + water.permanent.1 + (1|PinpointID), data=covs.1.2nd.breed, na.action="na.fail")
-summary(mod.1.2nd.breed)
-
-#7c. 100km extent availability: use 10km radius data
-mod.10.2nd.breed.glob <- lmer(Response ~ bare.10 + crops.10 + grass.10 + shrub.10 + water.permanent.10 + water.seasonal.10 + light.10 + Length.10 + pest.10 + drought.10 + factor(Population) +(1|PinpointID), data=covs.10.2nd.breed, na.action="na.fail")
-
-mod.10.2nd.breed.d <- dredge(mod.10.2nd.breed.glob, trace=2)
-mod.10.2nd.breed.d
-#pesticides, shrubs
-
-mod.10.2nd.breed <- lmer(Response ~ shrub.10 + pest.10 + (1|PinpointID), data=covs.10.2nd.breed, na.action="na.fail")
-summary(mod.10.2nd.breed)
-
-#OK SO WHY DOES POPULATION NOT AFFECT HABITAT SELECTION, BUT IT SHOWS IN THE MANTEL???
-
-#8. Focus on 100km extent: visualize for shape----
-ggplot(covs.1.2nd.winter1, aes(x=drought.1, y=Response)) +
+#5. Visualize----
+ggplot(covs.breed, aes(x=light.10, y=Response)) +
   geom_jitter() +
   geom_smooth()
 
-ggplot(covs.1.2nd.winter1, aes(x=drought.1, y=Response)) +
+ggplot(covs.breed, aes(x=light.10, y=Response)) +
   geom_point() +
   geom_smooth() +
   facet_wrap(~factor(Population), scales="free_x")
 
-ggplot(covs.1.2nd.winter1) +
-  geom_boxplot(aes(colour=factor(Response), y=drought.1, x=factor(Population)))
+ggplot(covs.breed) +
+  geom_boxplot(aes(colour=factor(Response), y=light.10, x=factor(Population)))
+
+ggplot(covs.winter1, aes(x=light.10, y=Response)) +
+  geom_jitter() +
+  geom_smooth()
+
+ggplot(covs.winter1, aes(x=light.10, y=Response)) +
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~factor(Population), scales="free_x")
+
+ggplot(covs.winter1) +
+  geom_jitter(aes(colour=factor(Response), y=crops.10, x=factor(Population)))
+
+#6. Breeding selection----
+mod.breed.global <- lmer(Response ~ pest.10*factor(Population) +
+                           change.10*factor(Population) +
+                           Length.10*factor(Population) +
+                           poly(crops.10, 2)*factor(Population) +
+                           poly(drought.10, 2)*factor(Population) +
+                           light.10*factor(Population) +
+                           (1|PinpointID),
+                         data=covs.breed,
+                         na.action="na.fail")
+
+mod.breed.dredge <- dredge(mod.breed.global, trace=2)
+mod.breed.dredge
+
+#7. Wintering selection----
+mod.winter1.global <- lmer(Response ~ pest.10*factor(Population) +
+                           change.10*factor(Population) +
+                           Length.10*factor(Population) +
+                           poly(crops.10, 2)*factor(Population) +
+                           poly(drought.10, 2)*factor(Population) +
+                           light.10*factor(Population) +
+                           (1|PinpointID),
+                         data=covs.winter1,
+                         na.action="na.fail")
+
+mod.winter1.dredge <- dredge(mod.winter1.global, trace=2)
+mod.winter1.dredge
+
+#8. Thinking----
+nbirds <- covs.breed %>% 
+  dplyr::select(Population, PinpointID) %>% 
+  unique()
+table(nbirds$Population)
+
+mod.wint.test <- lmer(Response ~ poly(drought.10)*factor(Population) +
+                        (1|PinpointID),
+                      data=covs.winter1,
+                      na.action="na.fail")
+dredge(mod.wint.test)
