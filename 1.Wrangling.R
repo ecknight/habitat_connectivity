@@ -54,6 +54,8 @@ dat.season <- dat.traj %>%
   mutate(Breed = ifelse(SeasonR2n=="Breed" & year(DateTime)==Year, "Breed1", "Breed2"))
 table(dat.season$SeasonR2n, dat.season$PinpointID)
 
+write.csv(dat.season, "CONIMCP_CleanDataAll_Habitat_All.csv", row.names = FALSE)
+
 #5. Filter----
 dat.hab <- dat.season %>% 
   dplyr::filter(!is.na(SeasonR2n))
