@@ -1,6 +1,9 @@
 library(tidyverse)
 library(ggpubr)
 
+#TO DO: TEST ASSUMPTIONS AND DECIDE IF SHOULD BE NONPARAMETRIC####
+#TO DO: EXPLORE PERMANOVA####
+
 #1. Read in data----
 dat <- read.csv("Covariates_Breed&Winter_Metadata.csv")
 
