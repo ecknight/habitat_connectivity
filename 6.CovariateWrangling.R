@@ -78,14 +78,25 @@ drought <- drought5 %>%
   left_join(drought200) %>% 
   left_join(droughtpt)
 
-#7. Read in data from other sources----
+#7. Wrangle forest loss from GEE----
+forest1 <- read.csv("Covariates/ForestLoss_1km.csv") %>% 
+  dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, loss) %>% 
+  rename(loss.1 = loss)
+forest10 <- read.csv("Covariates/ForestLoss_10km.csv") %>% 
+dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, loss) %>% 
+  rename(loss.10 = loss)
+  
+forest <- forest1 %>% 
+  left_join(forest10)
+
+#8. Read in data from other sources----
 pts.covs <- read.csv("ExtractedCovariates.csv") %>% 
   mutate_all(~ifelse(.=="", NA, .)) %>% 
   arrange(X, Y, PinpointID, Season, DateTime, Type, Radius) %>% 
   mutate(ID = row_number()) %>% 
   dplyr::select(-PinpointID, -Season, -DateTime, -Type, -Radius, -X, -Y)
 
-#8. Put all together and add other metadata for individuals----
+#9. Put all together and add other metadata for individuals----
 covs <- hm %>% 
   left_join(lc) %>% 
   left_join(light) %>% 
