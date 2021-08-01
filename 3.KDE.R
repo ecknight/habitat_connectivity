@@ -51,7 +51,7 @@ dat.kde.sp <- SpatialPointsDataFrame(coords=dat.kde.m,
                                    data=data.frame(dat.kde$ID),
                                    proj4string = CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
 
-kd <- kernelUD(dat.kde.sp, grid = 1000, extent=2, h="href", same4all=FALSE)
+kd <- kernelUD(dat.kde.sp, grid = 5000, extent=2, h="href", same4all=FALSE)
 
 #6. Calculate area of 95% isopleth----
 #Calculate area----
@@ -78,15 +78,14 @@ dat.area <- kd.area %>%
   group_by(PinpointID) %>% 
   mutate(count=n()) %>% 
   ungroup() %>% 
-  mutate(SeasonKDE = ifelse(SeasonR2n=="Breed2", "Breed", "Winter"))
+  mutate(SeasonKDE = ifelse(SeasonR2n=="Breed2", "Breed", "Winter")) %>% 
+  dplyr::select(PinpointID, Population, SeasonKDE, count, Sex, Mass, Wing, HRarea) %>% 
+  unique() %>% 
+  mutate(radius = sqrt(HRarea/3.1416))
 
-#Visualize
-ggplot(dat.area) +
-  geom_point(aes(x=Long, y=Lat, colour=HRarea), size=1.5) +
-  facet_wrap(~ID, scales="free") +
-  scale_colour_viridis_c()
+table(dat.area$PinpointID)
 
-ggsave("KDETroubleshooting.jpeg", height=16, width=20, units="in")
+write.csv(dat.area, "KDEArea.csv", row.names = FALSE)
 
 #8. Sample size----
 ggplot(dat.area) +
@@ -116,7 +115,7 @@ dredge(lm.breed)
 lm.winter <- lm(HRarea~poly(count,1)*Sex, data=dat.area.winter, na.action="na.fail")
 dredge(lm.winter)
 
-#9. Mean HR area
+#9. Mean HR area----
 area.breed <- dat.area.breed %>% 
   summarize(area.mean=mean(HRarea),
             area.sd=sd(HRarea),
@@ -133,7 +132,78 @@ area <- rbind(area.winter, area.breed) %>%
   mutate(radius.mean = sqrt(area.mean/3.1416))
 area
 
-write.csv(area, "KDEArea.csv", row.names = FALSE)
+write.csv(area, "KDEAreaMean.csv", row.names = FALSE)
+
+#10. Save out one individual for an example as shapefiles----
+dat.kde.i <- dat.kde %>% 
+  dplyr::filter(PinpointID==825)
+
+dat.kde.m <- dat.kde.i %>% 
+  st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
+  st_transform(crs=3857) %>% 
+  st_coordinates()
+
+dat.kde.sp <- SpatialPointsDataFrame(coords=dat.kde.m, 
+                                     data=data.frame(dat.kde.i$ID),
+                                     proj4string = CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
+
+kd <- kernelUD(dat.kde.sp, grid = 1000, extent=2, h="href", same4all=FALSE)
+
+kd.shp.95 <- getverticeshr(kd, 95) %>% 
+  st_as_sf() %>% 
+  mutate(iso=95)
+kd.shp.75 <- getverticeshr(kd, 75) %>% 
+  st_as_sf() %>% 
+  mutate(iso=75)
+kd.shp.50 <- getverticeshr(kd, 50) %>% 
+  st_as_sf() %>% 
+  mutate(iso=50)
+kd.shp.25 <- getverticeshr(kd, 25) %>% 
+  st_as_sf() %>% 
+  mutate(iso=25)
+kd.shp.05 <- getverticeshr(kd, 5) %>% 
+  st_as_sf() %>% 
+  mutate(iso=5)
+
+kd.shp <- rbind(kd.shp.95, kd.shp.75, kd.shp.50, kd.shp.25, kd.shp.05) %>% 
+  separate(id, into=c("PinpointID", "Season"), remove=FALSE)
+
+kd.shp.breed <- kd.shp %>% 
+  dplyr::filter(Season=="Breed2")
+dat.kde.i.breed <- dat.kde.i %>% 
+  dplyr::filter(SeasonR2n=="Breed2") %>% 
+  st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
+  st_transform(crs=3857) %>% 
+  st_coordinates() %>% 
+  data.frame() %>% 
+  cbind(dat.kde.i %>% 
+          dplyr::filter(SeasonR2n=="Breed2"))
+
+kd.shp.winter <- kd.shp %>% 
+  dplyr::filter(Season=="Winter2")
+dat.kde.i.winter <- dat.kde.i %>% 
+  dplyr::filter(SeasonR2n=="Winter2") %>% 
+  st_as_sf(coords=c("Long", "Lat"), crs=4326) %>% 
+  st_transform(crs=3857) %>% 
+  st_coordinates() %>% 
+  data.frame() %>% 
+  cbind(dat.kde.i %>% 
+          dplyr::filter(SeasonR2n=="Winter2"))
+
+breed <- ggplot() +
+  geom_sf(data=kd.shp.breed, aes(fill=iso)) +
+  geom_point(data=dat.kde.i.breed, aes(x=X, y=Y, colour=doy)) +
+  scale_colour_viridis_c()
+
+winter <- ggplot() +
+  geom_sf(data=kd.shp.winter, aes(fill=iso)) +
+  geom_point(data=dat.kde.i.winter, aes(x=X, y=Y, colour=doy)) +
+  scale_colour_viridis_c()
+
+grid.arrange(breed, winter)
+
+write_sf(kd.shp, "Shapefiles/ExampleKDE.shp")
+write.csv(dat.kde.i, "Shapefiles/ExampleKDEData.csv", row.names = FALSE)
 
 #B. WINTERING GROUNDS####
 dat.cent <- read.csv("BreedingWinterPoints.csv")
@@ -143,7 +213,7 @@ dat.wint <- dat.cent %>%
   st_transform(crs=3857) %>% 
   st_coordinates()
 
-#5. Calculate KDE for individuals with >= 5 points (minimum required)----
+#1. Calculate KDE for individuals with >= 5 points (minimum required)----
 dat.wint.sp <- SpatialPointsDataFrame(coords=dat.wint, 
                                      data=data.frame(ID=rep(1, nrow(dat.wint))),
                                      proj4string = CRS("+proj=merc +lon_0=0 +k=1 +x_0=0 +y_0=0 +a=6378137 +b=6378137 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs "))
