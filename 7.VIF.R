@@ -55,7 +55,7 @@ corrplot(M.1)
 
 vif(covs.1)
 
-#5. 20km radius----
+#5. 10km radius----
 covs.10 <- covs %>% 
   dplyr::select(hm.10, bare.10, crops.10, grass.10, moss.10, shrub.10, tree.10, urban.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10, change.10)
 
