@@ -83,7 +83,7 @@ vif(covs.10)
 covs.vif <- covs %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y,
                 lc, hm.pt, light.pt, drought.pt, pest.pt, 
-                bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1, change.1,
-                bare.10, crops.10, grass.10, shrub.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10, change.10)
+                bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1, change.1, urban.1, moss.1, tree.1, hm.1,
+                bare.10, crops.10, grass.10, shrub.10, water.permanent.10, water.seasonal.10, light.10, drought.10, Length.10, pest.10, change.10, urban.10, moss.10, tree.10, hm.10)
 
 write.csv(covs.vif, "Covariates_Breed&Winter_VIF.csv", row.names=FALSE)
