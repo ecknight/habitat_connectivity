@@ -12,17 +12,24 @@ covs <- read.csv("Covariates_Breed&Winter_Metadata.csv")
 
 covs.sel <- covs %>% 
   dplyr::filter(Type %in% c("Used")) %>% 
-  mutate(drought.10 = drought.10 + abs(min(drought.10)),
-         pest.10 = ifelse(pest.10 <0, 0, pest.10)) %>% 
-  mutate(pest.scale = scale(pest.10),
-         change.scale = scale(change.10),
-         length.scale = scale(Length.10),
-         crops.scale = scale(crops.10),
-         drought.scale = scale(drought.10),
-         light.scale = scale(light.10),
-         Population = as.factor(Population)) %>% 
+  mutate(pest.scale = scale(pest.10, center=FALSE),
+         change.scale = scale(change.10, center=FALSE),
+         length.scale = scale(Length.10, center=FALSE),
+         crops.scale = scale(crops.10, center=FALSE),
+         drought.scale = scale(drought.10, center=FALSE),
+         light.scale = scale(light.10, center=FALSE),
+         Population = as.factor(Population),
+         bare.scale = scale(bare.10, center=FALSE),
+         grass.scale = scale(grass.10, center=FALSE),
+         shrub.scale = scale(shrub.10, center=FALSE),
+         urban.scale = scale(urban.10, center=FALSE),
+         moss.scale = scale(moss.10, center=FALSE),
+         tree.scale = scale(tree.10, center=FALSE),
+         hm.scale = scale(hm.10, center=FALSE),
+         water.p.scale = scale(water.permanent.10, center=FALSE),
+         water.s.scale = scale(water.seasonal.10, center=FALSE)) %>% 
   rename(length.10 = Length.10) %>% 
-  dplyr::select(pest.10, change.10, length.10, crops.10, drought.10, light.10, Population, PinpointID, Season, Type, Sex, Wing, Mass, Winter2Pt)
+  dplyr::select(crops.scale, grass.scale, shrub.scale, tree.scale, hm.scale, water.p.scale, water.s.scale, Population, PinpointID, Season, Type, Sex, Wing, Mass, Winter2Pt)
 
 covs.breed <- covs.sel %>% 
   dplyr::filter(Season %in% c("Breed1", "Breed2", "Breed"))
@@ -42,6 +49,7 @@ set.seed(1234)
 scores.list <- list()
 covscores.list <- list()
 ano.list <- list()
+pro.list <- list()
 
 for(i in 1:boot){
   
@@ -157,11 +165,26 @@ for(i in 1:boot){
   
   ano.list[[i]] <- rbind(ano.results.breed, ano.results.winter1, ano.results.winter2)
   
+  #9. Procrustes test----
+  pro1 <- protest(nmds.breed, nmds.winter1, "sites")
+  pro2 <- protest(nmds.breed, nmds.winter2, "sites")
+  
+  pro.results1 <- data.frame(significance=pro1$signif,
+                             statistic=pro1$t0,
+                             Season="winter1")
+  
+  pro.results2 <- data.frame(significance=pro2$signif,
+                             statistic=pro2$t0,
+                             Season="winter2")
+  
+  pro.list[[i]] <- rbind(pro.results1, pro.results2)
+  
+  
   print(paste0("Finished boostrap ", i))
   
 }
 
-#8. Convert to datatable and write out----
+#10. Convert to datatable and write out----
 scores <- rbindlist(scores.list) %>% 
   mutate(PinpointID = as.numeric(PinpointID)) %>% 
   left_join(covs.sel %>% 
@@ -170,12 +193,14 @@ scores <- rbindlist(scores.list) %>%
 covscores <- rbindlist(covscores.list)
 
 ano <- rbindlist(ano.list)
+pro <- rbindlist(pro.list)
 
 write.csv(scores, "NMDSScores_Bootstap.csv", row.names = FALSE)
 write.csv(covscores, "NMDSCovScores_Bootstap.csv", row.names = FALSE)
 write.csv(ano, "ANOSIMResults_Bootstrap.csv", row.names = FALSE)
+write.csv(pro, "ProcrustesResults_Bootstrap.csv", row.names = FALSE)
 
-#9. Look at variance----
+#11. Look at variance----
 #Individual scores
 ggplot(scores) +
   geom_point(aes(x=factor(PinpointID), y=NMDS1, colour=factor(Population))) +
@@ -184,7 +209,7 @@ ggplot(scores) +
 ggplot(scores) +
   geom_point(aes(x=factor(PinpointID), y=NMDS2, colour=factor(Population))) +
   facet_wrap(~Season)
-#More variance in breeding, but looks like makes sense overall
+#More variance in wintering, but looks like makes sense overall
 
 ggplot(scores %>% 
          dplyr::filter(Season!="winter2")) +
@@ -206,17 +231,19 @@ ggplot(covscores %>%
   geom_point(aes(x=NMDS1, y=NMDS2, colour=factor(cov))) +
   facet_wrap(~Season)
 
-#10. Covariate effects----
+#12. Covariate effects----
 covscores.summary <- covscores %>% 
   mutate(length = sqrt(NMDS1^2 + NMDS2^2)) %>% 
   group_by(cov, Season) %>% 
   summarize(length.mn = mean(length),
-            length.sd = sd(length)) %>% 
+            length.sd = sd(length),
+            NMDS1.mn = mean(NMDS1),
+            NMDS2.mn = mean(NMDS2)) %>% 
   ungroup() %>% 
   arrange(Season, -length.mn)
 View(covscores.summary)
 
-#11. Anosim results----
+#13. Anosim results----
 ano.summary <- ano %>%
   group_by(Season) %>%
   summarize(sig = mean(significance),
@@ -225,3 +252,13 @@ ano.summary <- ano %>%
             stat.sd = sd(statistic)) %>% 
   ungroup()
 ano.summary
+
+#14. Procrustes results----
+pro.summary <- pro %>% 
+  group_by(Season) %>%
+  summarize(sig = mean(significance),
+            stat = mean(statistic),
+            sig.sd = sd(significance),
+            stat.sd = sd(statistic)) %>% 
+  ungroup()
+pro.summary
