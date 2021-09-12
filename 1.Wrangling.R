@@ -3,18 +3,53 @@ library(suncalc)
 library(lubridate)
 library(data.table)
 library(adehabitatLT)
+library(meanShiftR) #for density cluster analysis
+library(sf)
 
 options(scipen = 999)
 
-#THINK ABOUT USING THAT CLUSTERING ANALYSIS FOR WINTERING & BREEDING CLASSIFICATION
+whemi <- map_data("world", region=c("Canada", 
+                                    "USA", 
+                                    "Mexico",
+                                    "Guatemala", 
+                                    "Belize", 
+                                    "El Salvador",
+                                    "Honduras", 
+                                    "Nicaragua", 
+                                    "Costa Rica",
+                                    "Panama", 
+                                    "Jamaica", 
+                                    "Cuba", 
+                                    "The Bahamas",
+                                    "Haiti", 
+                                    "Dominican Republic", 
+                                    "Antigua and Barbuda",
+                                    "Dominica", 
+                                    "Saint Lucia", 
+                                    "Saint Vincent and the Grenadines", 
+                                    "Barbados",
+                                    "Grenada",
+                                    "Trinidad and Tobago",
+                                    "Colombia",
+                                    "Venezuela",
+                                    "Guyana",
+                                    "Suriname",
+                                    "Ecuador",
+                                    "Peru",
+                                    "Brazil",
+                                    "Bolivia",
+                                    "Paraguay",
+                                    "Chile",
+                                    "Argentina",
+                                    "Uruguay")) %>% 
+  dplyr::filter(!group%in%c(258:264))
 
 #1. Read in data----
 dat <- read.csv("/Users/ellyknight/Documents/UoA/Projects/Projects/MCP2/Analysis/Data/CONIMCP_CleanDataAll.csv") %>% 
   mutate(Date = as.Date(str_sub(DateTime, 1, 10)),
          DateTime = ymd_hms(paste0(Date, Time))) %>% 
   dplyr::select(PinpointID, Population, Mass, Wing, Sex, Type, DateTime, Date, Time, Year, Lat, Long, BandDist, WintDist, GCD, Season, Season2, Winter) %>% 
-  unique() %>% 
-  dplyr::filter(Winter==1)
+  unique()
   
 #2. Calculate sun times----
 dat.sun <- getSunlightTimes(data=dat%>% 
@@ -38,27 +73,112 @@ dat.traj <- rbindlist(traj) %>%
   mutate(R2n2 = max(R2n) - R2n) %>% 
   ungroup()
 
-#4. Recalculate seasons----
-dat.season <- dat.traj %>% 
-  mutate(R2nRound = round(R2n, -1)) %>% 
-  mutate(SeasonR2n = case_when(R2n2 < 10 ~ "Winter",
-                               R2n < 0.01 & BandDist < 100 & year(DateTime)==Year ~ "Breed1",
-                               R2n < 0.01 & BandDist < 100 & year(DateTime)>Year ~ "Breed2",
-                               R2n < 0.1 & PinpointID==826 & year(DateTime)>Year ~ "Breed2",
-                               PinpointID==81 & R2nRound %in% c(7230, 7240) ~ "Winter2",
-                               PinpointID==439 & R2nRound==7720 ~ "Winter2",
-                               PinpointID==443 & R2nRound==3460 ~ "Winter2",
-                               PinpointID==490 & R2nRound==4150 ~ "Winter2",
-                               PinpointID==825 & R2nRound==7770 ~ "Winter2",
-                               PinpointID==826 & R2nRound==6590 ~ "Winter2")) %>% 
-  mutate(Breed = ifelse(SeasonR2n=="Breed" & year(DateTime)==Year, "Breed1", "Breed2"))
-table(dat.season$SeasonR2n, dat.season$PinpointID)
+#4. Prepare for clustering----
+dat.coord <- dat.traj %>% 
+  st_as_sf(crs=4326, coords=c("Long", "Lat")) %>% 
+  st_transform(crs=3857) %>% 
+  st_coordinates() %>% 
+  cbind(dat.traj)
 
-write.csv(dat.season, "CONIMCP_CleanDataAll_Habitat_All.csv", row.names = FALSE)
+ids <- dat.coord %>% 
+  dplyr::select(PinpointID) %>% 
+  unique()
 
-#5. Filter----
-dat.hab <- dat.season %>% 
-  dplyr::filter(!is.na(SeasonR2n))
-table(dat.hab$PinpointID, dat.hab$SeasonR2n)
+#5. Mean shift classification----
+dat.shift <- data.frame()
+for(i in 1:nrow(ids)){
+  
+  dat.i <- dat.coord %>% 
+    dplyr::filter(PinpointID==ids$PinpointID[i])
+  
+  mat1 <- matrix(dat.i$X)
+  mat2 <- matrix(dat.i$Y)
+  mat <- cbind(mat1, mat2)
+  
+  shift <- meanShift(mat,
+                         algorithm="KDTREE",
+                         bandwidth=c(1,1))
+  
+  dat.shift <- dat.i %>% 
+    mutate(cluster = shift[[1]]) %>% 
+    rbind(dat.shift)
+}
 
-write.csv(dat.hab, "CONIMCP_CleanDataAll_Habitat.csv", row.names = FALSE)
+#6. Remove points that aren't in a cluster----
+dat.clust <- dat.shift %>% 
+  group_by(PinpointID, cluster) %>% 
+  mutate(count=n()) %>% 
+  ungroup() %>% 
+  mutate(stopover = ifelse(count > 3, 1, 0)) %>% 
+  dplyr::filter(stopover==1)
+
+#7. Clean wintering data----
+dat.wint <- dat.clust %>% 
+  dplyr::filter(Lat < 25) %>% 
+  group_by(PinpointID, cluster) %>% 
+  mutate(minDate = min(DateTime),
+         maxDate = max(DateTime),
+         duration = maxDate - minDate) %>% 
+  ungroup() %>% 
+  dplyr::filter(duration > 21) %>% 
+  mutate(Season="Winter") %>% 
+  dplyr::select(PinpointID, Population, Mass, Wing, Sex, Type, DateTime, Date, doy, Time, Year, Lat, Long, BandDist, WintDist, GCD, Season, dist, R2n, abs.angle, rel.angle, cluster, count)
+
+#Visualize
+plot.wint <- ggplot() +
+  geom_point(data=dat.wint, aes(x=Long, y=Lat, colour=doy), size=3, alpha=0.7) +
+  labs(x = "", y = "") +
+  theme_bw() +
+  scale_colour_viridis_c() +
+  facet_wrap(~PinpointID, ncol=10, scales="free")
+
+ggsave(plot.wint, file="Figures/MeanShift_wint.jpeg", width=20, height=10, unit="in")
+
+#8. Clean breeding data----
+dat.ids <- dat.wint %>% 
+  dplyr::select(PinpointID) %>% 
+  unique()
+
+dat.breed <- dat.traj %>% 
+  dplyr::filter(PinpointID %in% dat.ids$PinpointID) %>% 
+  left_join(dat.clust) %>% 
+  dplyr::filter(Lat > 25,
+                stopover==1 | Type=="Band") %>% 
+  group_by(PinpointID) %>% 
+  mutate(maxpt = ifelse(Lat==max(Lat), cluster, 0),
+         maxclust = max(maxpt),
+         useclust = ifelse(cluster==maxclust, 1, 0)) %>% 
+  mutate(TypeNo = ifelse(Type=="Band", 0, 1),
+         TypeSum = sum(TypeNo),
+         BandUse = case_when(TypeSum==0 ~ 1,
+                             is.na(maxclust) & Type=="Band" ~ 1)) %>% 
+  ungroup() %>% 
+  mutate(Season="Breed")  %>% 
+  dplyr::filter((useclust==1 & Type != "Band") | BandUse==1) %>% 
+  dplyr::select(PinpointID, Population, Mass, Wing, Sex, Type, DateTime, Date, doy, Time, Year, Lat, Long, BandDist, WintDist, GCD, Season, dist, R2n, abs.angle, rel.angle, cluster, count)
+
+#Visualize
+plot.breed <- ggplot() +
+  geom_point(data=dat.breed, aes(x=Long, y=Lat, colour=factor(Type)), size=3, alpha=0.7) +
+  labs(x = "", y = "") +
+  theme_bw() +
+  scale_colour_viridis_d() +
+  facet_wrap(~PinpointID, ncol=10, scales="free")
+
+ggsave(plot.breed, file="Figures/MeanShift_Breed.jpeg", width=20, height=10, unit="in")
+
+#9. Final product----
+dat.season <- rbind(dat.wint, dat.breed)
+
+plot.shift <- ggplot() +
+  geom_polygon(data=whemi, aes(x=long, y=lat, group=group), colour = "gray85", fill = "gray75", size=0.3) +
+  geom_point(data=dat.season, aes(x=Long, y=Lat, colour=factor(Season)), size=3, alpha=0.7) +
+  labs(x = "", y = "") +
+  xlim(c(-170, -30)) +
+  theme_bw() +
+  scale_colour_viridis_d() +
+  facet_wrap(~PinpointID, ncol=10)
+
+ggsave(plot.shift, file="Figures/MeanShift_Map.jpeg", width=20, height=10, unit="in")
+
+write.csv(dat.season, "CONIMCP_CleanDataAll_Habitat.csv", row.names = FALSE)
