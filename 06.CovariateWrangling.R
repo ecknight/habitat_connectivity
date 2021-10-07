@@ -85,7 +85,7 @@ forest1 <- read.csv("Covariates/ForestLoss_1km.csv") %>%
 forest10 <- read.csv("Covariates/ForestLoss_10km.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, X0_loss) %>% 
   rename(loss.10 = X0_loss)
-forest10 <- read.csv("Covariates/ForestLoss_point.csv") %>% 
+forestpt <- read.csv("Covariates/ForestLoss_point.csv") %>% 
   dplyr::select(PinpointID, Season, DateTime, Type, Radius, X, Y, X0_loss) %>% 
   rename(loss.pt = X0_loss)
 
@@ -100,7 +100,7 @@ pts.covs <- read.csv("ExtractedCovariates.csv") %>%
   mutate(ID = row_number()) %>% 
   dplyr::select(-PinpointID, -Season, -DateTime, -Type, -Radius, -X, -Y)
 
-#9. Put all together and add other metadata for individuals----
+#9. Put all together----
 covs <- hm %>% 
   left_join(lc) %>% 
   left_join(light) %>% 
