@@ -13,7 +13,7 @@ str(covs)
 
 #2. All variables---
 covs.vif <- covs %>% 
-  dplyr::select(-PinpointID, -Season, -DateTime, -Type, -Radius, -X, -Y, -lc)
+  dplyr::select(-PinpointID, -Season, -DateTime, -Type, -Radius, -X, -Y, -lc, -Population,-Mass, -Wing, -Sex)
 
 M <- cor(covs.vif, use="complete.obs")
 corrplot(M)
@@ -45,12 +45,12 @@ vif(covs.1)
 #Should probably take out tree & hm
 #Also take out moss & urban, not really relevant
 
-covs.1 <- covs %>% 
-  dplyr::select(bare.1, crops.1, grass.1, shrub.1, water.permanent.1, water.seasonal.1, light.1, drought.1, Length.1, pest.1, change.1)
+covs.2 <- covs.1 %>% 
+  dplyr::select(-moss.1, -hm.1, -tree.1)
 
-M.1 <- cor(covs.1, use="complete.obs")
-M.1
-corrplot(M.1)
+M.2 <- cor(covs.2, use="complete.obs")
+M.2
+corrplot(M.2)
 #Hm & stable lights 0.72
 
 vif(covs.1)
