@@ -105,6 +105,7 @@ covs <- hm %>%
   left_join(lc) %>% 
   left_join(light) %>% 
   left_join(drought) %>% 
+  left_join(forest) %>% 
   mutate_all(~ifelse(.=="", NA, .)) %>% 
   arrange(X, Y, PinpointID, Season, DateTime, Type, Radius) %>% 
   mutate(ID = row_number()) %>% 
@@ -117,8 +118,13 @@ meta <- read.csv("CONIMCP_CleanDataAll_Habitat_Roosting.csv") %>%
   dplyr::select(PinpointID, Population, Mass, Wing, Sex) %>% 
   unique()
 
+winter <- read.csv("CONIMCP_CleanDataAll_Habitat_Roosting.csv") %>% 
+  dplyr::select(Winter, PinpointID, DateTime, Lat, Long) %>% 
+  unique()
+
 covs.final <- covs %>% 
-  left_join(meta)
+  left_join(meta) %>% 
+  left_join(winter)
   
 write.csv(covs.final, "Covariates_Breed&Winter_Roosting.csv", row.names=FALSE)
 
