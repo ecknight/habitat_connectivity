@@ -1,51 +1,136 @@
 library(tidyverse)
 library(vegan)
 library(data.table)
+library(usdm)
+library(corrplot)
 
 options(scipen=999)
 
-#TO DO: UPDATE TO 3 AXES
 #TO DO: ANOSIM BETWEEN SEXES
 
 #1. Wrangle----
-covs <- read.csv("Covariates_Breed&Winter_Roosting.csv")
+covs <- read.csv("Covariates_Breed&Winter_Roosting.csv") %>% 
+  rename_all(~gsub(., pattern=".coverfraction", replacement="")) %>% 
+  rename_all(~gsub(., pattern="stable.lights", replacement="light")) %>% 
+  rename_all(~gsub(., pattern="change.confidence", replacement="change")) %>% 
+  mutate(Population = as.factor(Population)) %>% 
+  dplyr::filter(Type %in% c("Used"))
 
-covs.sel <- covs %>% 
-  dplyr::filter(Type %in% c("Used")) %>% 
-  mutate(pest.scale = scale(pest.10, center=FALSE),
-         change.scale = scale(change.10, center=FALSE),
-         length.scale = scale(Length.10, center=FALSE),
-         crops.scale = scale(crops.10, center=FALSE),
-         drought.scale = scale(drought.10, center=FALSE),
-         light.scale = scale(light.10, center=FALSE),
-         Population = as.factor(Population),
-         bare.scale = scale(bare.10, center=FALSE),
-         grass.scale = scale(grass.10, center=FALSE),
-         shrub.scale = scale(shrub.10, center=FALSE),
-         urban.scale = scale(urban.10, center=FALSE),
-         moss.scale = scale(moss.10, center=FALSE),
-         tree.scale = scale(tree.10, center=FALSE),
-         hm.scale = scale(hm.10, center=FALSE),
-         water.p.scale = scale(water.permanent.10, center=FALSE),
-         water.s.scale = scale(water.seasonal.10, center=FALSE)) %>% 
-  rename(length.10 = Length.10) %>% 
-  dplyr::select(crops.scale, grass.scale, shrub.scale, tree.scale, hm.scale, water.p.scale, water.s.scale, Population, PinpointID, Season, Type, Sex, Wing, Mass, Winter2Pt)
+covs.id <- covs %>% 
+  dplyr::filter(Winter==2) %>% 
+  dplyr::select(PinpointID) %>% 
+  unique()
 
-covs.breed <- covs.sel %>% 
-  dplyr::filter(Season %in% c("Breed1", "Breed2", "Breed"))
+covs.breed <- covs %>% 
+  dplyr::filter(Season %in% c("Breed")) %>% 
+  mutate(crops.scale = scale(crops.10+ 0.00001, center=FALSE),
+         bare.scale = scale(bare.10+ 0.00001, center=FALSE),
+         grass.scale = scale(grass.10+ 0.00001, center=FALSE),
+         shrub.scale = scale(shrub.10+ 0.00001, center=FALSE),
+         urban.scale = scale(urban.10+ 0.00001, center=FALSE),
+         moss.scale = scale(moss.10+ 0.00001, center=FALSE),
+         tree.scale = scale(tree.10+ 0.00001, center=FALSE),
+         water.p.scale = scale(water.permanent.10+ 0.00001, center=FALSE),
+         water.s.scale = scale(water.seasonal.10+ 0.00001, center=FALSE)) %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, moss.scale, tree.scale, water.p.scale, water.s.scale, Population, PinpointID, Season, Type, Sex, Wing, Mass)
 
-covs.winter1 <- covs.sel %>% 
-  dplyr::filter(Season %in% c("Winter"))
+covs.winter1 <- covs %>% 
+  dplyr::filter(Season %in% c("Winter") & Winter==1) %>% 
+  mutate(crops.scale = scale(crops.1+ 0.00001, center=FALSE),
+         bare.scale = scale(bare.1+ 0.00001, center=FALSE),
+         grass.scale = scale(grass.1+ 0.00001, center=FALSE),
+         shrub.scale = scale(shrub.1+ 0.00001, center=FALSE),
+         urban.scale = scale(urban.1+ 0.00001, center=FALSE),
+         moss.scale = scale(moss.1+ 0.00001, center=FALSE),
+         tree.scale = scale(tree.1+ 0.00001, center=FALSE),
+         water.p.scale = scale(water.permanent.1+ 0.00001, center=FALSE),
+         water.s.scale = scale(water.seasonal.1+ 0.00001, center=FALSE)) %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, moss.scale, tree.scale, water.p.scale, water.s.scale, Population, PinpointID, Season, Type, Sex, Wing, Mass)
 
-covs.winter2 <- covs.sel %>% 
-  dplyr::filter(Season=="Winter2" |
-                  (Season=="Winter" & Winter2Pt==0))
+covs.winter2 <- covs %>% 
+  dplyr::filter(Season %in% c("Winter") & Winter==2) %>% 
+  mutate(crops.scale = scale(crops.1+ 0.00001, center=FALSE),
+         bare.scale = scale(bare.1+ 0.00001, center=FALSE),
+         grass.scale = scale(grass.1+ 0.00001, center=FALSE),
+         shrub.scale = scale(shrub.1+ 0.00001, center=FALSE),
+         urban.scale = scale(urban.1+ 0.00001, center=FALSE),
+         moss.scale = scale(moss.1+ 0.00001, center=FALSE),
+         tree.scale = scale(tree.1+ 0.00001, center=FALSE),
+         water.p.scale = scale(water.permanent.1+ 0.00001, center=FALSE),
+         water.s.scale = scale(water.seasonal.1+ 0.00001, center=FALSE)) %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, moss.scale, tree.scale, water.p.scale, water.s.scale, Population, PinpointID, Season, Type, Sex, Wing, Mass) %>% 
+  rbind(covs.winter1 %>% 
+          dplyr::filter(!PinpointID %in% covs.id))
 
-#TO DO: ADD IN 2ND WINTERING GROUND ANALYSIS LATER####
+#2. VIF----
 
-#2. Set up bootstrap----
+#Breeding
+covs.breed.vif <- covs.breed %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, tree.scale, water.p.scale, water.s.scale)
+
+M <- cor(covs.breed.vif, use="complete.obs")
+M
+corrplot(M)
+#Urban & seasonal water are highly correlated?
+
+vif(covs.breed.vif)
+#Take out seasonal water
+
+covs.breed.vif <- covs.breed %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, tree.scale, water.p.scale)
+
+M <- cor(covs.breed.vif, use="complete.obs")
+M
+corrplot(M)
+
+vif(covs.breed.vif)
+#Take out tree cover
+
+covs.breed.vif <- covs.breed %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, water.p.scale)
+
+M <- cor(covs.breed.vif, use="complete.obs")
+M
+corrplot(M)
+
+vif(covs.breed.vif)
+
+#Wintering
+covs.winter1.vif <- covs.winter1 %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, tree.scale, water.p.scale, water.s.scale)
+
+M <- cor(covs.winter1.vif, use="complete.obs")
+M
+corrplot(M)
+#permanent and seasonal water are highly correlated?
+
+vif(covs.winter1.vif)
+#Take out seasonal water
+
+covs.winter1.vif <- covs.winter1 %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, tree.scale, water.p.scale)
+
+M <- cor(covs.winter1.vif, use="complete.obs")
+M
+corrplot(M)
+
+vif(covs.winter1.vif)
+#Take out tree cover
+
+covs.winter1.vif <- covs.winter1 %>% 
+  dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, water.p.scale)
+
+M <- cor(covs.winter1.vif, use="complete.obs")
+M
+corrplot(M)
+
+vif(covs.winter1.vif)
+
+
+#3. Set up bootstrap----
 boot <- 100
 set.seed(1234)
+stress.list <- list()
 scores.list <- list()
 covscores.list <- list()
 ano.list <- list()
@@ -53,7 +138,7 @@ pro.list <- list()
 
 for(i in 1:boot){
   
-  #3. Select one location per individual
+  #4. Select one location per individual
   covs.breed.i <- covs.breed %>% 
     group_by(PinpointID) %>% 
     sample_n(1) %>% 
@@ -69,43 +154,55 @@ for(i in 1:boot){
     sample_n(1) %>% 
     ungroup()
   
-  #4. Convert to matrix----
+  #5. Convert to matrix----
   mat.breed <- covs.breed.i %>% 
-    dplyr::select(-Population, -PinpointID, -Sex, -Season, -Wing, -Mass, -Winter2Pt, -Type) %>% 
+    dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, water.p.scale) %>% 
     data.matrix()
   rownames(mat.breed) <- covs.breed.i$PinpointID
   
   mat.winter1 <- covs.winter1.i %>% 
-    dplyr::select(-Population, -PinpointID, -Sex, -Season, -Wing, -Mass, -Winter2Pt, -Type) %>% 
+    dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, water.p.scale) %>% 
     data.matrix()
   rownames(mat.winter1) <- covs.winter1.i$PinpointID
   
   mat.winter2 <- covs.winter2.i %>% 
-    dplyr::select(-Population, -PinpointID, -Sex, -Season, -Wing, -Mass, -Winter2Pt, -Type) %>% 
+    dplyr::select(crops.scale, bare.scale, grass.scale, shrub.scale, urban.scale, water.p.scale) %>% 
     data.matrix()
   rownames(mat.winter2) <- covs.winter2.i$PinpointID
   
-  #5. Calculate distance matrix----
+  #6. Run NMDS----
+  nmds.breed <- metaMDS(mat.breed, k=3, trace=0, distance = "mahalanobis", trymax=100, maxit=1000)
+  nmds.winter1 <- metaMDS(mat.winter1, k=3, trace=0, distance = "mahalanobis", trymax=100, maxit=1000)
+  nmds.winter2 <- metaMDS(mat.winter2, k=3, trace=0, distance = "mahalanobis", trymax=100, maxit=1000)
   
-  #5. Run NMDS----
-  nmds.breed <- metaMDS(mat.breed, k=2, trace=0, distance = "mahalanobis")
-  nmds.winter1 <- metaMDS(mat.winter1, k=2, trace=0, distance = "mahalanobis")
-  nmds.winter2 <- metaMDS(mat.winter2, k=2, trace=0, distance = "mahalanobis")
+  #save out diagnostics
+  stress.breed <- data.frame(stress = nmds.breed$stress,
+                             converge = nmds.breed$converged, 
+                             Season="breed")
+  stress.winter1 <- data.frame(stress = nmds.winter1$stress,
+                             converge = nmds.winter1$converged,
+                             Season="winter1")
+  stress.winter2 <- data.frame(stress = nmds.winter2$stress,
+                               converge = nmds.winter2$converged,
+                               Season="winter2")
+  
+  stress.list[[i]] <- rbind(stress.breed, stress.winter1, stress.winter2) %>% 
+    mutate(boot=i)
   
   #Plotting
-  stressplot(nmds.breed) #Excellent
+#  stressplot(nmds.breed) #Excellent
   
-  ordiplot(nmds.breed,type="n")
-  orditorp(nmds.breed,display="sites",cex=1.25,air=0.01, col=as.numeric(as.character(covs.winter1.i$Population)))
-  ordihull(nmds.breed, groups=as.numeric(as.character(covs.winter1.i$Population)), draw="polygon", col="grey90", label=FALSE)
-  orditorp(nmds.breed,display="species",col="red",air=0.01)
+#  ordiplot(nmds.breed,type="n")
+#  orditorp(nmds.breed,display="sites",cex=1.25,air=0.01, col=as.numeric(as.character(covs.winter1.i$Population)))
+#  ordihull(nmds.breed, groups=as.numeric(as.character(covs.winter1.i$Population)), draw="polygon", col="grey90", label=FALSE)
+#  orditorp(nmds.breed,display="species",col="red",air=0.01)
   
-  ordiplot(nmds.winter1,type="n")
-  orditorp(nmds.winter1,display="sites",cex=1.25,air=0.01, col=as.numeric(as.character(covs.winter1.i$Population)))
-  ordihull(nmds.winter1, groups=as.numeric(as.character(covs.winter1.i$Population)), draw="polygon", col="grey90", label=FALSE)
-  orditorp(nmds.winter1,display="species",col="red",air=0.01)
+#  ordiplot(nmds.winter1,type="n")
+#  orditorp(nmds.winter1,display="sites",cex=1.25,air=0.01, col=as.numeric(as.character(covs.winter1.i$Population)))
+#  ordihull(nmds.winter1, groups=as.numeric(as.character(covs.winter1.i$Population)), draw="polygon", col="grey90", label=FALSE)
+#  orditorp(nmds.winter1,display="species",col="red",air=0.01)
   
-  #6. Save out coords for each individual----
+  #7. Save out coords for each individual----
   scores.breed <- scores(nmds.breed, "sites") %>% 
     data.frame() %>% 
     mutate(PinpointID=rownames(scores(nmds.breed)),
@@ -124,7 +221,7 @@ for(i in 1:boot){
   scores.list[[i]] <- rbind(scores.breed, scores.winter1, scores.winter2) %>% 
     mutate(boot=i)
   
-  #7. Save out coords for each covariate----
+  #8. Save out coords for each covariate----
   covscores.breed <- scores(nmds.breed, "species") %>% 
     data.frame() %>% 
     mutate(cov=rownames(scores(nmds.breed, "species")),
@@ -144,7 +241,7 @@ for(i in 1:boot){
   covscores.list[[i]] <- rbind(covscores.breed, covscores.winter1, covscores.winter2) %>% 
     mutate(boot=i)
   
-  #8. Test for group differences----
+  #9. Test for group differences----
   dist.breed <- vegdist(mat.breed, method = "mahalanobis")
   ano.breed <- anosim(dist.breed, covs.breed.i$Population)
   ano.results.breed <- data.frame(significance = ano.breed$signif,
@@ -165,7 +262,7 @@ for(i in 1:boot){
   
   ano.list[[i]] <- rbind(ano.results.breed, ano.results.winter1, ano.results.winter2)
   
-  #9. Procrustes test----
+  #10. Procrustes test----
   pro1 <- protest(nmds.breed, nmds.winter1, "sites")
   pro2 <- protest(nmds.breed, nmds.winter2, "sites")
   
@@ -184,23 +281,27 @@ for(i in 1:boot){
   
 }
 
-#10. Convert to datatable and write out----
+#11. Convert to datatable and write out----
+stress <- rbindlist(stress.list)
+
 scores <- rbindlist(scores.list) %>% 
   mutate(PinpointID = as.numeric(PinpointID)) %>% 
-  left_join(covs.sel %>% 
+  left_join(covs %>% 
               dplyr::select(PinpointID, Population, Sex, Wing, Mass) %>% 
               unique())
+
 covscores <- rbindlist(covscores.list)
 
 ano <- rbindlist(ano.list)
 pro <- rbindlist(pro.list)
 
+write.csv(stress, "NMDSStress_Bootstrap.csv", row.names = FALSE)
 write.csv(scores, "NMDSScores_Bootstap.csv", row.names = FALSE)
 write.csv(covscores, "NMDSCovScores_Bootstap.csv", row.names = FALSE)
 write.csv(ano, "ANOSIMResults_Bootstrap.csv", row.names = FALSE)
 write.csv(pro, "ProcrustesResults_Bootstrap.csv", row.names = FALSE)
 
-#11. Look at variance----
+#12. Look at variance----
 #Individual scores
 ggplot(scores) +
   geom_point(aes(x=factor(PinpointID), y=NMDS1, colour=factor(Population))) +
@@ -209,11 +310,24 @@ ggplot(scores) +
 ggplot(scores) +
   geom_point(aes(x=factor(PinpointID), y=NMDS2, colour=factor(Population))) +
   facet_wrap(~Season)
+
+ggplot(scores) +
+  geom_point(aes(x=factor(PinpointID), y=NMDS3, colour=factor(Population))) +
+  facet_wrap(~Season)
 #More variance in wintering, but looks like makes sense overall
 
-ggplot(scores %>% 
-         dplyr::filter(Season!="winter2")) +
+ggplot(scores) +
   geom_point(aes(x=NMDS1, y=NMDS2, colour=factor(Population))) +
+  facet_wrap(~Season) +
+  scale_colour_viridis_d()
+
+ggplot(scores) +
+  geom_point(aes(x=NMDS2, y=NMDS3, colour=factor(Population))) +
+  facet_wrap(~Season) +
+  scale_colour_viridis_d()
+
+ggplot(scores) +
+  geom_point(aes(x=NMDS1, y=NMDS3, colour=factor(Population))) +
   facet_wrap(~Season) +
   scale_colour_viridis_d()
 
@@ -226,12 +340,16 @@ ggplot(covscores) +
   geom_point(aes(x=cov, y=NMDS2, colour=factor(cov))) +
   facet_wrap(~Season)
 
-ggplot(covscores %>% 
-         dplyr::filter(Season!="winter2")) +
+ggplot(covscores) +
+  geom_point(aes(x=cov, y=NMDS3, colour=factor(cov))) +
+  facet_wrap(~Season)
+
+ggplot(covscores) +
   geom_point(aes(x=NMDS1, y=NMDS2, colour=factor(cov))) +
   facet_wrap(~Season)
 
-#12. Covariate effects----
+#13. Covariate effects----
+#NEED TO DECIDE IF I WANT THIS SECTION?
 covscores.summary <- covscores %>% 
   mutate(length = sqrt(NMDS1^2 + NMDS2^2)) %>% 
   group_by(cov, Season) %>% 
@@ -243,7 +361,7 @@ covscores.summary <- covscores %>%
   arrange(Season, -length.mn)
 View(covscores.summary)
 
-#13. Anosim results----
+#14. Anosim results----
 ano.summary <- ano %>%
   group_by(Season) %>%
   summarize(sig = mean(significance),
@@ -253,7 +371,7 @@ ano.summary <- ano %>%
   ungroup()
 ano.summary
 
-#14. Procrustes results----
+#15. Procrustes results----
 pro.summary <- pro %>% 
   group_by(Season) %>%
   summarize(sig = mean(significance),
