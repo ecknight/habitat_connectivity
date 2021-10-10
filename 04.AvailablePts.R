@@ -4,8 +4,7 @@ library(data.table)
 
 #1. Read in used data----
 dat.cent <- read.csv("BreedingWinterCentroids.csv")
-dat.hab <- read.csv("CONIMCP_CleanDataAll_Habitat_Roosting.csv") %>% 
-  dplyr::filter(Winter==1)
+dat.hab <- read.csv("CONIMCP_CleanDataAll_Habitat_Roosting.csv")
 
 #2. recall radius size for each season----
 area <- read.csv("KDEAreaMean.csv") %>% 
